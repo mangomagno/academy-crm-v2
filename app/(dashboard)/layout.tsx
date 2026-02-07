@@ -17,6 +17,8 @@ import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
 import { SidebarNav } from '@/components/sidebar-nav';
 import { UserNav } from '@/components/user-nav';
+import { NotificationBell } from '@/components/notification-bell';
+
 
 export default function DashboardLayout({
     children,
@@ -82,7 +84,10 @@ export default function DashboardLayout({
                     <SidebarTrigger />
                     <Separator orientation="vertical" className="h-6" />
                     <div className="flex-1" />
-                    <UserNav />
+                    <div className="flex items-center gap-4">
+                        <NotificationBell />
+                        <UserNav />
+                    </div>
                 </header>
                 <main className="flex-1 p-6">
                     {children}

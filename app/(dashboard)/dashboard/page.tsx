@@ -12,6 +12,8 @@ import {
     useUsers
 } from '@/hooks/use-db';
 import { db } from '@/lib/db';
+import { notifyLessonConfirmed, notifyLessonCancelled } from '@/lib/notifications';
+
 import {
     Card,
     CardContent,
@@ -52,7 +54,11 @@ export default function TeacherDashboardPage() {
 
     const handleAcceptLesson = async (lessonId: string) => {
         try {
+            const lesson = await db.lessons.get(lessonId);
+            if (!lesson) return;
+
             await db.lessons.update(lessonId, { status: 'confirmed' });
+            await notifyLessonConfirmed(lesson.studentId, user?.name || 'Your teacher', lessonId);
             toast.success('Lesson request accepted');
         } catch {
             toast.error('Failed to accept lesson');
@@ -61,7 +67,11 @@ export default function TeacherDashboardPage() {
 
     const handleRejectLesson = async (lessonId: string) => {
         try {
+            const lesson = await db.lessons.get(lessonId);
+            if (!lesson) return;
+
             await db.lessons.update(lessonId, { status: 'rejected' });
+            await notifyLessonCancelled(lesson.studentId, user?.name || 'Your teacher', lessonId);
             toast.success('Lesson request rejected');
         } catch {
             toast.error('Failed to reject lesson');

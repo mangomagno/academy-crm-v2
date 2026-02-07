@@ -7,6 +7,8 @@ import { ArrowLeft, Calendar, Clock, Check, ChevronRight } from 'lucide-react';
 import { useUserById, useTeacherProfile, useAvailability, useBlockedSlots, useLessons, useIsSubscribed } from '@/hooks/use-db';
 import { useCurrentUser, useRequireRole } from '@/hooks/use-auth';
 import { db } from '@/lib/db';
+import { notifyLessonRequest } from '@/lib/notifications';
+
 import {
     getAvailableSlots,
     hasAvailableSlots,
@@ -128,15 +130,7 @@ export default function BookLessonPage({ params }: { params: Promise<{ teacherId
             });
 
             // Create notification for teacher
-            await db.notifications.add({
-                id: crypto.randomUUID(),
-                userId: teacherId,
-                type: 'lesson_request',
-                message: `New lesson request from ${currentUser.name} on ${formatDate(selectedDate)} at ${selectedTime.startTime}`,
-                read: false,
-                relatedId: lessonId,
-                createdAt: new Date(),
-            });
+            await notifyLessonRequest(teacherId, currentUser.name, lessonId);
 
             toast.success(
                 lessonStatus === 'confirmed'

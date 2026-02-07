@@ -4,6 +4,8 @@ import * as React from 'react';
 import { useRequireRole } from '@/hooks/use-auth';
 import { useUsers } from '@/hooks/use-db';
 import { db } from '@/lib/db';
+import { notifyTeacherApproved } from '@/lib/notifications';
+
 import type { User, UserRole, TeacherStatus } from '@/types';
 import {
     Table,
@@ -95,6 +97,9 @@ export default function UserManagementPage() {
     const handleUpdateStatus = async (userId: string, status: TeacherStatus) => {
         try {
             await db.users.update(userId, { teacherStatus: status });
+            if (status === 'approved') {
+                await notifyTeacherApproved(userId);
+            }
             toast.success(`User status updated to ${status}`);
         } catch {
             toast.error('Failed to update status');
