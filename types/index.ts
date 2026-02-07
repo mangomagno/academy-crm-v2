@@ -1,6 +1,6 @@
 export type UserRole = 'admin' | 'teacher' | 'student';
 export type TeacherStatus = 'pending' | 'approved' | 'rejected';
-export type LessonStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';
+export type LessonStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'rejected';
 export type PaymentStatus = 'unpaid' | 'paid';
 
 export interface User {
