@@ -33,6 +33,13 @@ export class AcademyCRMDatabase extends Dexie {
             notifications: 'id, userId, read, createdAt'
         });
     }
+
+    async updatePaymentStatus(paymentId: string, status: 'paid' | 'unpaid') {
+        return this.payments.update(paymentId, {
+            status,
+            paidAt: status === 'paid' ? new Date() : undefined
+        });
+    }
 }
 
 export const db = new AcademyCRMDatabase();
