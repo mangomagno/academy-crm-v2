@@ -27,11 +27,19 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased scanlines relative min-h-screen`}
       >
         <Providers>
           {children}
           <Toaster richColors position="top-right" />
+
+          {/* Authentic 2001 Branding */}
+          <div className="fixed bottom-4 left-4 z-[100] scale-75 origin-bottom-left">
+            <div className="parental-advisory">
+              PARENTAL ADVISORY<br />
+              <span className="text-[0.6rem] block leading-none">EXPLICIT CONTENT</span>
+            </div>
+          </div>
         </Providers>
       </body>
     </html>

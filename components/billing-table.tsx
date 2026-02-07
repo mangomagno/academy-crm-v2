@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
     Table,
     TableBody,
@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { db } from '@/lib/db';
 import type { Payment, User, Lesson } from '@/types';
 import { toast } from 'sonner';
+import { SnoopDanceOverlay } from '@/components/snoop-dance-overlay';
 
 interface BillingTableProps {
     payments: Payment[];
@@ -23,6 +24,7 @@ interface BillingTableProps {
 }
 
 export function BillingTable({ payments, students, lessons, month }: BillingTableProps) {
+    const [showSnoop, setShowSnoop] = useState(false);
     const billingData = useMemo(() => {
         const studentMap = new Map<string, {
             studentName: string;
@@ -64,6 +66,11 @@ export function BillingTable({ payments, students, lessons, month }: BillingTabl
         try {
             const newStatus = currentStatus ? 'unpaid' : 'paid';
             await Promise.all(paymentIds.map((id) => db.updatePaymentStatus(id, newStatus)));
+
+            if (newStatus === 'paid') {
+                setShowSnoop(true);
+            }
+
             toast.success(`Marked as ${newStatus}`);
         } catch (error) {
             console.error('Failed to update payment status:', error);
@@ -114,6 +121,7 @@ export function BillingTable({ payments, students, lessons, month }: BillingTabl
                     ))}
                 </TableBody>
             </Table>
+            <SnoopDanceOverlay isOpen={showSnoop} onClose={() => setShowSnoop(false)} />
         </div>
     );
 }

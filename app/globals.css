@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -6,8 +7,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: 'Rajdhani', var(--font-geist-sans);
+  --font-mono: 'Orbitron', var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -47,72 +48,47 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: hsl(0 0% 98%);
-  --sidebar-foreground: hsl(240 5.3% 26.1%);
-  --sidebar-primary: hsl(240 5.9% 10%);
-  --sidebar-primary-foreground: hsl(0 0% 98%);
-  --sidebar-accent: hsl(240 4.8% 95.9%);
-  --sidebar-accent-foreground: hsl(240 5.9% 10%);
-  --sidebar-border: hsl(220 13% 91%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  --radius: 0px;
+  /* Sharp corners for that technical look */
+  --background: oklch(0 0 0);
+  /* Pure Black */
+  --foreground: oklch(0.85 0.25 145);
+  /* Neon Green Chrome */
+  --card: oklch(0.1 0 0);
+  --card-foreground: oklch(0.85 0.25 145);
+  --popover: oklch(0.1 0 0);
+  --popover-foreground: oklch(0.85 0.25 145);
+  --primary: oklch(0.85 0.25 145);
+  --primary-foreground: oklch(0 0 0);
+  --secondary: oklch(0.2 0 0);
+  --secondary-foreground: oklch(0.85 0.25 145);
+  --muted: oklch(0.15 0 0);
+  --muted-foreground: oklch(0.5 0.1 145);
+  --accent: oklch(0.25 0.15 145 / 0.2);
+  --accent-foreground: oklch(0.9 0.3 145);
+  --destructive: oklch(0.5 0.2 25);
+  --border: oklch(0.85 0.25 145 / 0.3);
+  --input: oklch(0.85 0.25 145 / 0.1);
+  --ring: oklch(0.85 0.25 145);
+  --chart-1: oklch(0.85 0.25 145);
+  --chart-2: oklch(0.5 0.2 25);
+  --chart-3: oklch(0.3 0 0);
+  --chart-4: oklch(0.6 0.1 145);
+  --chart-5: oklch(0.7 0.15 145);
+  --sidebar: oklch(0.05 0 0);
+  --sidebar-foreground: oklch(0.85 0.25 145);
+  --sidebar-primary: oklch(0.85 0.25 145);
+  --sidebar-primary-foreground: oklch(0 0 0);
+  --sidebar-accent: oklch(0.85 0.25 145 / 0.1);
+  --sidebar-accent-foreground: oklch(0.9 0.3 145);
+  --sidebar-border: oklch(0.85 0.25 145 / 0.2);
+  --sidebar-ring: oklch(0.85 0.25 145);
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: hsl(240 5.9% 10%);
-  --sidebar-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-primary: hsl(224.3 76.3% 48%);
-  --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(240 3.7% 15.9%);
-  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-border: hsl(240 3.7% 15.9%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+/* Force Dark Mode as the only mode for "2001" vibe */
+.light,
+:root {
+  color-scheme: dark;
 }
 
 @layer base {
@@ -121,6 +97,61 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans selection:bg-primary/30 selection:text-primary uppercase tracking-wider;
+    background-image:
+      radial-gradient(circle at 50% 50%, oklch(0.85 0.25 145 / 0.05) 0%, transparent 100%),
+      linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+      linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    background-size: 100% 100%, 100% 4px, 100% 100%;
+    text-shadow: 0 0 5px oklch(0.85 0.25 145 / 0.5);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-mono font-black italic;
+    text-shadow: 0 0 10px oklch(0.85 0.25 145 / 0.8), 2px 2px oklch(0 0 0);
+  }
+}
+
+@layer utilities {
+  .neon-border {
+    border: 1px solid var(--primary);
+    box-shadow: 0 0 10px var(--primary), inset 0 0 5px var(--primary);
+  }
+
+  .glossy-panel {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(0, 0, 0, 0) 100%);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(0, 255, 65, 0.2);
+  }
+
+  .scanlines::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    background-size: 100% 2px, 3px 100%;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.3;
+  }
+
+  .parental-advisory {
+    background: white;
+    color: black;
+    font-family: Arial, sans-serif;
+    padding: 0.25rem 0.5rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -1px;
+    border: 2px solid black;
+    display: inline-block;
   }
 }
