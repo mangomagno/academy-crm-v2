@@ -1,45 +1,38 @@
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
-import { db } from '@/lib/db';
-import { verifyPassword } from '@/lib/auth-utils';
 import type { UserRole, TeacherStatus } from '@/types';
 
+/**
+ * Auth.js configuration for Academy CRM.
+ * 
+ * IMPORTANT: Since we use Dexie (IndexedDB) which is client-side only,
+ * credential verification happens in the browser before calling signIn.
+ * The authorize function receives pre-verified user data.
+ */
 export const { handlers, signIn, signOut, auth } = NextAuth({
     providers: [
         Credentials({
             credentials: {
-                email: { label: 'Email', type: 'email' },
-                password: { label: 'Password', type: 'password' }
+                // These fields contain pre-verified user data from client
+                id: { type: 'text' },
+                email: { type: 'email' },
+                name: { type: 'text' },
+                role: { type: 'text' },
+                teacherStatus: { type: 'text' },
             },
             async authorize(credentials) {
-                if (!credentials?.email || !credentials?.password) {
+                // Client already verified credentials against Dexie
+                // Just validate we have the required fields
+                if (!credentials?.id || !credentials?.email || !credentials?.name || !credentials?.role) {
                     return null;
                 }
 
-                const email = credentials.email as string;
-                const password = credentials.password as string;
-
-                // Find user by email
-                const user = await db.users.where('email').equals(email).first();
-
-                if (!user) {
-                    return null;
-                }
-
-                // Verify password
-                const isValid = await verifyPassword(password, user.password);
-
-                if (!isValid) {
-                    return null;
-                }
-
-                // Return user object for session
                 return {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email,
-                    role: user.role,
-                    teacherStatus: user.teacherStatus
+                    id: credentials.id as string,
+                    name: credentials.name as string,
+                    email: credentials.email as string,
+                    role: credentials.role as UserRole,
+                    teacherStatus: (credentials.teacherStatus as TeacherStatus) || undefined,
                 };
             }
         })

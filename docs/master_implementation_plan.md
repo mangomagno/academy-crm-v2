@@ -10,6 +10,9 @@ A CRM for freelance music teachers with three user roles: **Admin**, **Teacher**
 > [!NOTE]
 > **Local Development**: Since we're using Dexie.js (IndexedDB), all data is browser-local. Each browser/profile has its own database. Seed data will create a default admin account for testing.
 
+> [!CAUTION]
+> **Client-Side Auth Architecture**: Because Dexie (IndexedDB) is browser-only, credential verification happens client-side. This is acceptable for a local-first app but would need a proper backend for production with server-side credential verification.
+
 ---
 
 ## Phase 1: Project Setup & Database Schema
@@ -153,23 +156,33 @@ export const db = new AcademyCRMDatabase();
 
 ### [NEW] [auth.ts](file:///c:/Users/avzma/Documents/GitHub/academy-crm/auth.ts)
 
-Auth.js configuration with credentials provider:
+Auth.js configuration with credentials provider.
+
+> [!IMPORTANT]
+> **Client-Side Credential Verification**: Since Dexie (IndexedDB) only works in the browser, credential verification happens **client-side** before calling `signIn()`. The authorize function receives pre-verified user data.
 
 ```typescript
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
-import { db } from '@/lib/db';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        // Pre-verified user data from client
+        id: { type: 'text' },
+        email: { type: 'email' },
+        name: { type: 'text' },
+        role: { type: 'text' },
+        teacherStatus: { type: 'text' },
       },
       async authorize(credentials) {
-        // Auth logic - validate against Dexie
-        // Return user object or null
+        // Client already verified against Dexie
+        // Just validate required fields exist
+        if (!credentials?.id || !credentials?.email) {
+          return null;
+        }
+        return { ...credentials };
       }
     })
   ],
