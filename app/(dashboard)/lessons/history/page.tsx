@@ -2,16 +2,18 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
+import { useTranslations, useLocale } from 'next-intl';
 import { ArrowLeft, History, Clock } from 'lucide-react';
 import { useLessons, useUsers } from '@/hooks/use-db';
 import { useCurrentUser, useRequireRole } from '@/hooks/use-auth';
-import { formatDate } from '@/lib/booking-utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Spinner } from '@/components/ui/spinner';
 import { Empty } from '@/components/ui/empty';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format } from 'date-fns';
+import { es, enUS } from 'date-fns/locale';
 import type { LessonStatus } from '@/types';
 
 const STATUS_COLORS: Record<LessonStatus, string> = {
@@ -27,8 +29,13 @@ export default function LessonHistoryPage() {
     const { user: currentUser, loading: userLoading } = useCurrentUser();
     const allLessons = useLessons(undefined, currentUser?.id);
     const users = useUsers();
+    const t = useTranslations('lessonHistory');
+    const tl = useTranslations('lessons');
+    const ts = useTranslations('status');
+    const tc = useTranslations('common');
+    const locale = useLocale();
+    const dateFnsLocale = locale === 'es' ? es : enUS;
 
-    // Filter to past lessons (completed, cancelled, or past date)
     const pastLessons = useMemo(() => {
         if (!allLessons) return [];
         const now = new Date();
@@ -44,7 +51,6 @@ export default function LessonHistoryPage() {
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [allLessons]);
 
-    // Create user map for teacher lookup
     const userMap = useMemo(() => {
         if (!users) return new Map();
         return new Map(users.map(u => [u.id, u]));
@@ -58,9 +64,7 @@ export default function LessonHistoryPage() {
         );
     }
 
-    if (!isAuthorized) {
-        return null;
-    }
+    if (!isAuthorized) return null;
 
     return (
         <div className="space-y-6">
@@ -71,8 +75,8 @@ export default function LessonHistoryPage() {
                     </Link>
                 </Button>
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Lesson History</h1>
-                    <p className="text-muted-foreground">Your past and completed lessons</p>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+                    <p className="text-muted-foreground">{t('description')}</p>
                 </div>
             </div>
 
@@ -80,28 +84,28 @@ export default function LessonHistoryPage() {
                 <Empty>
                     <History className="h-12 w-12 text-muted-foreground" />
                     <div>
-                        <h3 className="text-lg font-semibold">No lesson history</h3>
-                        <p className="text-muted-foreground">Your completed and past lessons will appear here.</p>
+                        <h3 className="text-lg font-semibold">{t('noHistory')}</h3>
+                        <p className="text-muted-foreground">{t('noHistoryDesc')}</p>
                     </div>
                 </Empty>
             ) : (
                 <Card>
                     <CardHeader>
-                        <CardTitle>Past Lessons</CardTitle>
+                        <CardTitle>{t('pastLessons')}</CardTitle>
                         <CardDescription>
-                            {pastLessons.length} lesson{pastLessons.length !== 1 ? 's' : ''} in history
+                            {t('lessonsInHistory', { count: pastLessons.length })}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Time</TableHead>
-                                    <TableHead>Teacher</TableHead>
-                                    <TableHead>Duration</TableHead>
+                                    <TableHead>{tl('date')}</TableHead>
+                                    <TableHead>{tl('time')}</TableHead>
+                                    <TableHead>{tl('teacher')}</TableHead>
+                                    <TableHead>{tl('duration')}</TableHead>
                                     <TableHead>Status</TableHead>
-                                    <TableHead>Notes</TableHead>
+                                    <TableHead>{tl('notes')}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -111,7 +115,7 @@ export default function LessonHistoryPage() {
                                     return (
                                         <TableRow key={lesson.id}>
                                             <TableCell className="font-medium">
-                                                {formatDate(new Date(lesson.date))}
+                                                {format(new Date(lesson.date), 'PP', { locale: dateFnsLocale })}
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-1">
@@ -119,14 +123,14 @@ export default function LessonHistoryPage() {
                                                     {lesson.startTime} - {lesson.endTime}
                                                 </div>
                                             </TableCell>
-                                            <TableCell>{teacher?.name || 'Unknown'}</TableCell>
-                                            <TableCell>{lesson.duration} min</TableCell>
+                                            <TableCell>{teacher?.name || tc('unknownUser')}</TableCell>
+                                            <TableCell>{tc('min', { count: lesson.duration })}</TableCell>
                                             <TableCell>
                                                 <Badge
                                                     variant="outline"
                                                     className={STATUS_COLORS[lesson.status]}
                                                 >
-                                                    {lesson.status}
+                                                    {ts(lesson.status)}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="max-w-xs truncate">

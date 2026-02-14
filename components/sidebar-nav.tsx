@@ -7,18 +7,18 @@ import {
     SidebarMenuItem,
     SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { getNavItemsForRole } from '@/components/nav-items';
+import { useNavItems } from '@/components/nav-items';
 import { useUserRole } from '@/hooks/use-auth';
 
 export function SidebarNav() {
     const pathname = usePathname();
     const role = useUserRole();
 
+    const navItems = useNavItems(role || '');
+
     if (!role) {
         return null;
     }
-
-    const navItems = getNavItemsForRole(role);
 
     return (
         <SidebarMenu>

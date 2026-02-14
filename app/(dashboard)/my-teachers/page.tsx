@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { GraduationCap, Calendar, UserMinus } from 'lucide-react';
 import { useSubscriptions, useUsers, useTeacherProfiles } from '@/hooks/use-db';
 import { useCurrentUser, useRequireRole } from '@/hooks/use-auth';
@@ -31,10 +32,11 @@ export default function MyTeachersPage() {
     const subscriptions = useSubscriptions(currentUser?.id);
     const users = useUsers();
     const profiles = useTeacherProfiles();
+    const t = useTranslations('myTeachers');
+    const tc = useTranslations('common');
 
     const [unsubscribingId, setUnsubscribingId] = useState<string | null>(null);
 
-    // Create maps for quick lookup
     const userMap = useMemo(() => {
         if (!users) return new Map();
         return new Map(users.map(u => [u.id, u]));
@@ -53,9 +55,9 @@ export default function MyTeachersPage() {
                 .where('[studentId+teacherId]')
                 .equals([currentUser.id, teacherId])
                 .delete();
-            toast.success('Unsubscribed successfully');
+            toast.success(t('unsubscribed'));
         } catch (error) {
-            toast.error('Failed to unsubscribe');
+            toast.error(t('unsubscribeError'));
             console.error(error);
         } finally {
             setUnsubscribingId(null);
@@ -70,28 +72,23 @@ export default function MyTeachersPage() {
         );
     }
 
-    if (!isAuthorized) {
-        return null;
-    }
+    if (!isAuthorized) return null;
 
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">My Teachers</h1>
-                <p className="text-muted-foreground">
-                    Teachers you&apos;re subscribed to
-                </p>
+                <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
             </div>
 
             {subscriptions.length === 0 ? (
                 <Empty>
                     <GraduationCap className="h-12 w-12 text-muted-foreground" />
                     <div>
-                        <h3 className="text-lg font-semibold">No subscriptions yet</h3>
-                        <p className="text-muted-foreground">Browse teachers and subscribe to start booking lessons.</p>
+                        <h3 className="text-lg font-semibold">{t('noTeachers')}</h3>
+                        <p className="text-muted-foreground">{t('noTeachersDesc')}</p>
                     </div>
                     <Button asChild className="mt-4">
-                        <Link href="/teachers">Browse Teachers</Link>
+                        <Link href="/teachers">{t('browseTeachers')}</Link>
                     </Button>
                 </Empty>
             ) : (
@@ -123,7 +120,7 @@ export default function MyTeachersPage() {
                                         <h3 className="font-semibold truncate">{teacher.name}</h3>
                                         {profile && (
                                             <Badge variant="secondary" className="mt-1">
-                                                ${profile.hourlyRate}/hr
+                                                ${profile.hourlyRate}{tc('per_hour')}
                                             </Badge>
                                         )}
                                     </div>
@@ -133,7 +130,7 @@ export default function MyTeachersPage() {
                                         <div className="flex flex-wrap gap-1">
                                             {profile.lessonDurations.map((duration: number) => (
                                                 <Badge key={duration} variant="outline" className="text-xs">
-                                                    {duration} min
+                                                    {tc('min', { count: duration })}
                                                 </Badge>
                                             ))}
                                         </div>
@@ -143,7 +140,7 @@ export default function MyTeachersPage() {
                                     <Button asChild className="flex-1">
                                         <Link href={`/book/${subscription.teacherId}`}>
                                             <Calendar className="h-4 w-4 mr-2" />
-                                            Book Lesson
+                                            {t('bookLesson')}
                                         </Link>
                                     </Button>
                                     <AlertDialog>
@@ -158,18 +155,19 @@ export default function MyTeachersPage() {
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
                                             <AlertDialogHeader>
-                                                <AlertDialogTitle>Unsubscribe from {teacher.name}?</AlertDialogTitle>
+                                                <AlertDialogTitle>
+                                                    {t('unsubscribeConfirmTitle', { name: teacher.name })}
+                                                </AlertDialogTitle>
                                                 <AlertDialogDescription>
-                                                    You will no longer be able to book lessons with this teacher.
-                                                    You can resubscribe at any time from the teacher&apos;s profile.
+                                                    {t('unsubscribeConfirmDesc')}
                                                 </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogCancel>{tc('cancel')}</AlertDialogCancel>
                                                 <AlertDialogAction
                                                     onClick={() => handleUnsubscribe(subscription.teacherId)}
                                                 >
-                                                    Unsubscribe
+                                                    {t('confirmUnsubscribe')}
                                                 </AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>

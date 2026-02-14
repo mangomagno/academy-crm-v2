@@ -1,49 +1,65 @@
 'use client';
 
-import { signOut } from 'next-auth/react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { signOut, useSession } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
+import { Clock, LogOut } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import { Clock } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
+import { db } from '@/lib/db';
 
 export default function PendingApprovalPage() {
+    const { data: session } = useSession();
+    const router = useRouter();
+    const t = useTranslations('auth');
+    const [checking, setChecking] = useState(true);
+
+    useEffect(() => {
+        async function checkStatus() {
+            if (!session?.user?.email) return;
+
+            const user = await db.users.where('email').equals(session.user.email).first();
+            if (user?.teacherStatus === 'approved') {
+                router.replace('/dashboard');
+            } else if (user?.teacherStatus === 'rejected') {
+                router.replace('/registration-rejected');
+            }
+            setChecking(false);
+        }
+
+        checkStatus();
+        const interval = setInterval(checkStatus, 5000);
+        return () => clearInterval(interval);
+    }, [session, router]);
+
+    if (checking) {
+        return (
+            <div className="flex h-[50vh] items-center justify-center">
+                <Spinner className="h-8 w-8" />
+                <span className="ml-2">{t('checkingStatus')}</span>
+            </div>
+        );
+    }
+
     return (
-        <Card className="w-full max-w-md text-center">
-            <CardHeader className="space-y-1">
-                <div className="flex justify-center mb-4">
-                    <div className="rounded-full bg-amber-100 p-4 dark:bg-amber-900/30">
-                        <Clock className="h-8 w-8 text-amber-600 dark:text-amber-400" />
-                    </div>
+        <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100">
+                    <Clock className="h-6 w-6 text-yellow-600" />
                 </div>
-                <CardTitle className="text-2xl">Pending Approval</CardTitle>
+                <CardTitle className="text-2xl">{t('pendingApproval')}</CardTitle>
                 <CardDescription>
-                    Your teacher account is awaiting approval
+                    {t('pendingApprovalDesc')}
                 </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-                <p className="text-muted-foreground">
-                    Thank you for registering as a teacher on Academy CRM.
-                    An administrator will review your account shortly.
-                </p>
-                <p className="text-muted-foreground">
-                    You&apos;ll be notified once your account has been approved
-                    and you can start accepting students.
-                </p>
-            </CardContent>
-            <CardFooter className="flex justify-center">
-                <Button
-                    variant="outline"
-                    onClick={() => signOut({ callbackUrl: '/login' })}
-                >
-                    Sign out
+            <CardContent className="flex justify-center">
+                <Button variant="outline" onClick={() => signOut({ callbackUrl: '/login' })}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    {t('signOut')}
                 </Button>
-            </CardFooter>
+            </CardContent>
         </Card>
     );
 }

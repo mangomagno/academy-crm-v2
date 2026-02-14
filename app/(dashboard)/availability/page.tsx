@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslations } from 'next-intl';
 import {
     useCurrentUser,
     useRequireApprovedTeacher
@@ -39,21 +40,24 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const DAYS_OF_WEEK = [
-    { value: 1, label: 'Monday' },
-    { value: 2, label: 'Tuesday' },
-    { value: 3, label: 'Wednesday' },
-    { value: 4, label: 'Thursday' },
-    { value: 5, label: 'Friday' },
-    { value: 6, label: 'Saturday' },
-    { value: 0, label: 'Sunday' },
-];
+const DAY_KEYS = [
+    { value: 1, key: 'monday' },
+    { value: 2, key: 'tuesday' },
+    { value: 3, key: 'wednesday' },
+    { value: 4, key: 'thursday' },
+    { value: 5, key: 'friday' },
+    { value: 6, key: 'saturday' },
+    { value: 0, key: 'sunday' },
+] as const;
 
 export default function AvailabilityPage() {
     const { isApproved, loading: authLoading } = useRequireApprovedTeacher();
     const { user } = useCurrentUser();
     const profile = useTeacherProfile(user?.id);
     const availability = useAvailability(user?.id);
+    const t = useTranslations('availability');
+    const td = useTranslations('days');
+    const tc = useTranslations('common');
 
     // Form states
     const [hourlyRate, setHourlyRate] = React.useState<number>(0);
@@ -72,7 +76,7 @@ export default function AvailabilityPage() {
     }, [profile]);
 
     if (authLoading) {
-        return <div className="p-8">Loading...</div>;
+        return <div className="p-8">{tc('loading')}</div>;
     }
 
     if (!isApproved) return null;
@@ -84,9 +88,9 @@ export default function AvailabilityPage() {
                 hourlyRate: Number(hourlyRate),
                 autoAccept
             });
-            toast.success('Profile settings updated');
+            toast.success(t('profileSaved'));
         } catch {
-            toast.error('Failed to update profile settings');
+            toast.error(t('profileSaveError'));
         }
     };
 
@@ -100,19 +104,24 @@ export default function AvailabilityPage() {
                 startTime: newSlot.startTime,
                 endTime: newSlot.endTime
             });
-            toast.success('Availability slot added');
+            toast.success(t('slotAdded'));
         } catch {
-            toast.error('Failed to add slot');
+            toast.error(t('slotAddError'));
         }
     };
 
     const handleDeleteSlot = async (id: string) => {
         try {
             await db.availability.delete(id);
-            toast.success('Slot removed');
+            toast.success(t('slotRemoved'));
         } catch {
-            toast.error('Failed to remove slot');
+            toast.error(t('slotRemoveError'));
         }
+    };
+
+    const getDayLabel = (dayValue: number) => {
+        const day = DAY_KEYS.find(d => d.value === dayValue);
+        return day ? td(day.key) : '';
     };
 
     const sortedAvailability = availability?.sort((a, b) => {
@@ -123,7 +132,7 @@ export default function AvailabilityPage() {
     return (
         <div className="flex-1 space-y-6 p-8 pt-6">
             <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-bold tracking-tight">Availability & Settings</h2>
+                <h2 className="text-3xl font-bold tracking-tight">{t('title')}</h2>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
@@ -133,15 +142,15 @@ export default function AvailabilityPage() {
                         <CardHeader>
                             <CardTitle className="flex items-center">
                                 <Settings2 className="mr-2 h-5 w-5" />
-                                Profile Settings
+                                {t('profileSettings')}
                             </CardTitle>
                             <CardDescription>
-                                Configure your rates and booking preferences
+                                {t('description')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="space-y-2">
-                                <Label htmlFor="rate">Hourly Rate ($)</Label>
+                                <Label htmlFor="rate">{t('hourlyRate')}</Label>
                                 <div className="relative">
                                     <DollarSign className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                     <Input
@@ -156,9 +165,9 @@ export default function AvailabilityPage() {
 
                             <div className="flex items-center justify-between space-x-2 border rounded-lg p-4 bg-muted/20">
                                 <div className="space-y-1">
-                                    <Label htmlFor="auto-accept" className="text-base">Auto-accept Requests</Label>
+                                    <Label htmlFor="auto-accept" className="text-base">{t('autoAccept')}</Label>
                                     <p className="text-sm text-muted-foreground">
-                                        Instantly confirm new lesson bookings
+                                        {t('autoAcceptDesc')}
                                     </p>
                                 </div>
                                 <Switch
@@ -170,7 +179,7 @@ export default function AvailabilityPage() {
 
                             <Button onClick={handleUpdateProfile} className="w-full">
                                 <Save className="mr-2 h-4 w-4" />
-                                Save Profile Settings
+                                {tc('save')}
                             </Button>
                         </CardContent>
                     </Card>
@@ -179,26 +188,22 @@ export default function AvailabilityPage() {
                         <CardHeader>
                             <CardTitle className="flex items-center">
                                 <Plus className="mr-2 h-5 w-5" />
-                                Add Availability Window
+                                {t('addSlot')}
                             </CardTitle>
-                            <CardDescription>
-                                Set your recurring weekly schedule
-                            </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
-                                <Label>Day of Week</Label>
                                 <Select
                                     value={newSlot.dayOfWeek}
                                     onValueChange={(v) => setNewSlot(prev => ({ ...prev, dayOfWeek: v }))}
                                 >
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select day" />
+                                        <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {DAYS_OF_WEEK.map(day => (
+                                        {DAY_KEYS.map(day => (
                                             <SelectItem key={day.value} value={day.value.toString()}>
-                                                {day.label}
+                                                {td(day.key)}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -206,7 +211,6 @@ export default function AvailabilityPage() {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Start Time</Label>
                                     <Input
                                         type="time"
                                         value={newSlot.startTime}
@@ -214,7 +218,6 @@ export default function AvailabilityPage() {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>End Time</Label>
                                     <Input
                                         type="time"
                                         value={newSlot.endTime}
@@ -224,7 +227,7 @@ export default function AvailabilityPage() {
                             </div>
                             <Button variant="outline" onClick={handleAddSlot} className="w-full">
                                 <Plus className="mr-2 h-4 w-4" />
-                                Add Slot
+                                {t('addSlot')}
                             </Button>
                         </CardContent>
                     </Card>
@@ -235,24 +238,21 @@ export default function AvailabilityPage() {
                     <CardHeader>
                         <CardTitle className="flex items-center">
                             <Clock className="mr-2 h-5 w-5" />
-                            Current Schedule
+                            {t('weeklySchedule')}
                         </CardTitle>
-                        <CardDescription>
-                            Your active weekly availability
-                        </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-3">
                             {sortedAvailability?.length === 0 ? (
                                 <p className="text-sm text-muted-foreground text-center py-8">
-                                    No availability slots defined yet.
+                                    {t('noSlots')}
                                 </p>
                             ) : (
                                 sortedAvailability?.map((slot) => (
                                     <div key={slot.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/10 group">
                                         <div className="flex items-center space-x-3">
                                             <Badge variant="secondary" className="w-24 justify-center">
-                                                {DAYS_OF_WEEK.find(d => d.value === slot.dayOfWeek)?.label}
+                                                {getDayLabel(slot.dayOfWeek)}
                                             </Badge>
                                             <span className="text-sm font-medium">
                                                 {slot.startTime} - {slot.endTime}

@@ -1,47 +1,35 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import { useRequireRole } from '@/hooks/use-auth';
 import { useUsers, useLessons } from '@/hooks/use-db';
 import type { LessonStatus } from '@/types';
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+    Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
+    Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import {
-    Search,
-    User,
-    GraduationCap,
-    FilterX,
-    MoreVertical
-} from 'lucide-react';
+import { Search, User, GraduationCap, FilterX, MoreVertical } from 'lucide-react';
 import { format } from 'date-fns';
+import { es, enUS } from 'date-fns/locale';
 
 export default function AdminLessonsPage() {
     const { isAuthorized, loading: authLoading } = useRequireRole(['admin']);
     const allUsers = useUsers();
     const allLessons = useLessons();
+    const t = useTranslations('admin');
+    const ts = useTranslations('status');
+    const tc = useTranslations('common');
+    const locale = useLocale();
+    const dateFnsLocale = locale === 'es' ? es : enUS;
 
     const [searchQuery, setSearchQuery] = React.useState('');
     const [statusFilter, setStatusFilter] = React.useState<string>('all');
@@ -49,12 +37,10 @@ export default function AdminLessonsPage() {
     const [studentFilter, setStudentFilter] = React.useState<string>('all');
 
     if (authLoading) {
-        return <div className="p-8">Loading...</div>;
+        return <div className="p-8">{tc('loading')}</div>;
     }
 
-    if (!isAuthorized) {
-        return null;
-    }
+    if (!isAuthorized) return null;
 
     const teachers = allUsers?.filter(u => u.role === 'teacher') || [];
     const students = allUsers?.filter(u => u.role === 'student') || [];
@@ -75,19 +61,20 @@ export default function AdminLessonsPage() {
     });
 
     const getUserName = (userId: string) => {
-        return allUsers?.find(u => u.id === userId)?.name || 'Unknown User';
+        return allUsers?.find(u => u.id === userId)?.name || tc('unknownUser');
     };
 
     const getStatusBadge = (status: LessonStatus) => {
+        const label = ts(status);
         switch (status) {
             case 'confirmed':
-                return <Badge className="bg-green-100 text-green-800 border-green-200">Confirmed</Badge>;
+                return <Badge className="bg-green-100 text-green-800 border-green-200">{label}</Badge>;
             case 'pending':
-                return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Pending</Badge>;
+                return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">{label}</Badge>;
             case 'cancelled':
-                return <Badge className="bg-red-100 text-red-800 border-red-200">Cancelled</Badge>;
+                return <Badge className="bg-red-100 text-red-800 border-red-200">{label}</Badge>;
             case 'completed':
-                return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Completed</Badge>;
+                return <Badge className="bg-blue-100 text-blue-800 border-blue-200">{label}</Badge>;
             default:
                 return <Badge variant="outline">{status}</Badge>;
         }
@@ -103,15 +90,12 @@ export default function AdminLessonsPage() {
     return (
         <div className="flex-1 space-y-6 p-8 pt-6">
             <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-bold tracking-tight">All Lessons</h2>
+                <h2 className="text-3xl font-bold tracking-tight">{t('allLessons')}</h2>
             </div>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Lesson History & Schedule</CardTitle>
-                    <CardDescription>
-                        Monitor all lessons scheduled on the platform.
-                    </CardDescription>
+                    <CardTitle>{t('lessonSchedule')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4 mb-6">
@@ -119,7 +103,7 @@ export default function AdminLessonsPage() {
                             <div className="relative flex-1">
                                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                    placeholder="Search by teacher or student..."
+                                    placeholder={tc('search')}
                                     className="pl-8"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -128,42 +112,42 @@ export default function AdminLessonsPage() {
                             <div className="flex flex-wrap gap-2">
                                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                                     <SelectTrigger className="w-[130px]">
-                                        <SelectValue placeholder="Status" />
+                                        <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All Status</SelectItem>
-                                        <SelectItem value="pending">Pending</SelectItem>
-                                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                                        <SelectItem value="completed">Completed</SelectItem>
-                                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                                        <SelectItem value="all">{t('allStatus')}</SelectItem>
+                                        <SelectItem value="pending">{ts('pending')}</SelectItem>
+                                        <SelectItem value="confirmed">{ts('confirmed')}</SelectItem>
+                                        <SelectItem value="completed">{ts('completed')}</SelectItem>
+                                        <SelectItem value="cancelled">{ts('cancelled')}</SelectItem>
                                     </SelectContent>
                                 </Select>
 
                                 <Select value={teacherFilter} onValueChange={setTeacherFilter}>
                                     <SelectTrigger className="w-[180px]">
-                                        <SelectValue placeholder="Teacher" />
+                                        <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All Teachers</SelectItem>
-                                        {teachers.map(t => (
-                                            <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                                        <SelectItem value="all">{t('allTeachers')}</SelectItem>
+                                        {teachers.map(teacher => (
+                                            <SelectItem key={teacher.id} value={teacher.id}>{teacher.name}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
 
                                 <Select value={studentFilter} onValueChange={setStudentFilter}>
                                     <SelectTrigger className="w-[180px]">
-                                        <SelectValue placeholder="Student" />
+                                        <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All Students</SelectItem>
+                                        <SelectItem value="all">{t('allStudents')}</SelectItem>
                                         {students.map(s => (
                                             <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
 
-                                <Button variant="ghost" size="icon" onClick={resetFilters} title="Reset Filters">
+                                <Button variant="ghost" size="icon" onClick={resetFilters}>
                                     <FilterX className="h-4 w-4" />
                                 </Button>
                             </div>
@@ -174,12 +158,12 @@ export default function AdminLessonsPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Date & Time</TableHead>
-                                    <TableHead>Teacher</TableHead>
-                                    <TableHead>Student</TableHead>
-                                    <TableHead>Duration</TableHead>
+                                    <TableHead>{t('dateTime')}</TableHead>
+                                    <TableHead>{t('teacherCol')}</TableHead>
+                                    <TableHead>{t('studentCol')}</TableHead>
+                                    <TableHead>{t('durationCol')}</TableHead>
                                     <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
+                                    <TableHead className="text-right"></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -188,7 +172,7 @@ export default function AdminLessonsPage() {
                                         <TableRow key={lesson.id}>
                                             <TableCell>
                                                 <div className="flex flex-col">
-                                                    <span className="font-medium">{format(new Date(lesson.date), 'MMM d, yyyy')}</span>
+                                                    <span className="font-medium">{format(new Date(lesson.date), 'PP', { locale: dateFnsLocale })}</span>
                                                     <span className="text-xs text-muted-foreground">{lesson.startTime} - {lesson.endTime}</span>
                                                 </div>
                                             </TableCell>
@@ -205,7 +189,7 @@ export default function AdminLessonsPage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                <span className="text-sm">{lesson.duration} min</span>
+                                                <span className="text-sm">{tc('min', { count: lesson.duration })}</span>
                                             </TableCell>
                                             <TableCell>
                                                 {getStatusBadge(lesson.status)}
@@ -220,7 +204,7 @@ export default function AdminLessonsPage() {
                                 ) : (
                                     <TableRow>
                                         <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                                            No lessons found matching your filters.
+                                            {t('noResults')}
                                         </TableCell>
                                     </TableRow>
                                 )}

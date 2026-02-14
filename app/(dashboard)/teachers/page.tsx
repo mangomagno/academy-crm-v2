@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Users } from 'lucide-react';
 import { useTeachers, useTeacherProfiles } from '@/hooks/use-db';
 import { useRequireRole } from '@/hooks/use-auth';
@@ -16,8 +17,9 @@ export default function TeachersPage() {
     const { isAuthorized, loading: authLoading } = useRequireRole(['student']);
     const teachers = useTeachers('approved');
     const profiles = useTeacherProfiles();
+    const t = useTranslations('teachers');
+    const tc = useTranslations('common');
 
-    // Create a map of teacher profiles by userId for quick lookup
     const profileMap = useMemo(() => {
         if (!profiles) return new Map();
         return new Map(profiles.map(p => [p.userId, p]));
@@ -31,25 +33,20 @@ export default function TeachersPage() {
         );
     }
 
-    if (!isAuthorized) {
-        return null;
-    }
+    if (!isAuthorized) return null;
 
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Browse Teachers</h1>
-                <p className="text-muted-foreground">
-                    Find and subscribe to music teachers
-                </p>
+                <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
             </div>
 
             {teachers.length === 0 ? (
                 <Empty>
                     <Users className="h-12 w-12 text-muted-foreground" />
                     <div>
-                        <h3 className="text-lg font-semibold">No teachers available</h3>
-                        <p className="text-muted-foreground">There are no approved teachers at the moment. Please check back later.</p>
+                        <h3 className="text-lg font-semibold">{t('noTeachers')}</h3>
+                        <p className="text-muted-foreground">{t('noTeachersDesc')}</p>
                     </div>
                 </Empty>
             ) : (
@@ -75,7 +72,7 @@ export default function TeachersPage() {
                                         <h3 className="font-semibold truncate">{teacher.name}</h3>
                                         {profile && (
                                             <Badge variant="secondary" className="mt-1">
-                                                ${profile.hourlyRate}/hr
+                                                ${profile.hourlyRate}{tc('per_hour')}
                                             </Badge>
                                         )}
                                     </div>
@@ -87,14 +84,14 @@ export default function TeachersPage() {
                                         </p>
                                     ) : (
                                         <p className="text-sm text-muted-foreground italic">
-                                            No bio available
+                                            {t('noTeachersDesc')}
                                         </p>
                                     )}
                                     {profile?.lessonDurations && profile.lessonDurations.length > 0 && (
                                         <div className="mt-3 flex flex-wrap gap-1">
                                             {profile.lessonDurations.map((duration: number) => (
                                                 <Badge key={duration} variant="outline" className="text-xs">
-                                                    {duration} min
+                                                    {tc('min', { count: duration })}
                                                 </Badge>
                                             ))}
                                         </div>
@@ -103,7 +100,7 @@ export default function TeachersPage() {
                                 <CardFooter>
                                     <Button asChild className="w-full">
                                         <Link href={`/teachers/${teacher.id}`}>
-                                            View Profile
+                                            {t('viewProfile')}
                                         </Link>
                                     </Button>
                                 </CardFooter>

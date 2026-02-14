@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +24,7 @@ import { seedIfEmpty } from '@/lib/seed';
 
 export default function LoginPage() {
     const router = useRouter();
+    const t = useTranslations('auth');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -51,7 +53,7 @@ export default function LoginPage() {
             const user = await db.users.where('email').equals(email).first();
 
             if (!user) {
-                toast.error('Invalid email or password');
+                toast.error(t('invalidCredentials'));
                 setIsLoading(false);
                 return;
             }
@@ -59,7 +61,7 @@ export default function LoginPage() {
             const isValid = await verifyPassword(password, user.password);
 
             if (!isValid) {
-                toast.error('Invalid email or password');
+                toast.error(t('invalidCredentials'));
                 setIsLoading(false);
                 return;
             }
@@ -75,18 +77,18 @@ export default function LoginPage() {
             });
 
             if (result?.error) {
-                toast.error('Invalid email or password');
+                toast.error(t('invalidCredentials'));
                 setIsLoading(false);
                 return;
             }
 
-            toast.success('Logged in successfully');
+            toast.success(t('loginSuccess'));
 
             // Redirect will be handled by middleware or we refresh
             router.refresh();
             router.push('/');
         } catch {
-            toast.error('An error occurred. Please try again.');
+            toast.error(t('loginError'));
             setIsLoading(false);
         }
     };
@@ -94,15 +96,15 @@ export default function LoginPage() {
     return (
         <Card className="w-full max-w-md">
             <CardHeader className="space-y-1">
-                <CardTitle className="text-2xl">Sign in</CardTitle>
+                <CardTitle className="text-2xl">{t('signIn')}</CardTitle>
                 <CardDescription>
-                    Enter your email and password to access your account
+                    {t('email')} & {t('password')}
                 </CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmit}>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
+                        <Label htmlFor="email">{t('email')}</Label>
                         <Input
                             id="email"
                             type="email"
@@ -114,7 +116,7 @@ export default function LoginPage() {
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
+                        <Label htmlFor="password">{t('password')}</Label>
                         <Input
                             id="password"
                             type="password"
@@ -131,16 +133,16 @@ export default function LoginPage() {
                         {isLoading ? (
                             <>
                                 <Spinner className="mr-2" />
-                                Signing in...
+                                {t('signingIn')}
                             </>
                         ) : (
-                            'Sign in'
+                            t('signIn')
                         )}
                     </Button>
                     <p className="text-sm text-muted-foreground text-center">
-                        Don&apos;t have an account?{' '}
+                        {t('noAccount')}{' '}
                         <Link href="/register" className="text-primary hover:underline">
-                            Register
+                            {t('register')}
                         </Link>
                     </p>
                 </CardFooter>

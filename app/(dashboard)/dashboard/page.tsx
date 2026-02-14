@@ -1,240 +1,243 @@
 'use client';
 
-import * as React from 'react';
-import {
-    useCurrentUser,
-    useRequireApprovedTeacher
-} from '@/hooks/use-auth';
-import {
-    useTodaysLessons,
-    usePendingLessons,
-    useSubscriptions,
-    useUsers
-} from '@/hooks/use-db';
-import { db } from '@/lib/db';
-import { notifyLessonConfirmed, notifyLessonCancelled } from '@/lib/notifications';
-
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle
-} from '@/components/ui/card';
+import { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
+import { useLocale } from 'next-intl';
+import { Users, BookOpen, Clock, DollarSign, CheckCircle, XCircle } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-    Users,
-    Calendar,
-    Clock,
-    CheckCircle2,
-    XCircle,
-    CalendarDays,
-    DollarSign
-} from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
+import { Empty } from '@/components/ui/empty';
+import { useCurrentUser, useRequireRole } from '@/hooks/use-auth';
+import { useLessons, useSubscriptions, usePayments, useUsers } from '@/hooks/use-db';
+import { notifyLessonConfirmed, notifyLessonCancelled } from '@/lib/notifications';
+import { db } from '@/lib/db';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, isToday, startOfWeek, endOfWeek } from 'date-fns';
+import { es, enUS } from 'date-fns/locale';
 
-export default function TeacherDashboardPage() {
-    const { isApproved, loading: authLoading } = useRequireApprovedTeacher();
-    const { user } = useCurrentUser();
-    const allUsers = useUsers();
+export default function DashboardPage() {
+    const { isAuthorized, loading: authLoading } = useRequireRole(['teacher']);
+    const { user: currentUser, loading: userLoading } = useCurrentUser();
+    const allLessons = useLessons(currentUser?.id);
+    const subscriptions = useSubscriptions(undefined, currentUser?.id);
+    const payments = usePayments(currentUser?.id);
+    const users = useUsers();
+    const t = useTranslations('dashboardTeacher');
+    const locale = useLocale();
+    const dateFnsLocale = locale === 'es' ? es : enUS;
 
-    const todaysLessons = useTodaysLessons(user?.id);
-    const pendingLessons = usePendingLessons(user?.id);
-    const subscriptions = useSubscriptions(undefined, user?.id);
+    // Statistics
+    const stats = useMemo(() => {
+        if (!allLessons || !subscriptions || !payments) return null;
 
-    if (authLoading) {
-        return <div className="p-8">Loading...</div>;
-    }
+        const now = new Date();
+        const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
 
-    if (!isApproved) {
-        return null; // Hook will redirect
-    }
+        const lessonsThisWeek = allLessons.filter(l => {
+            const d = new Date(l.date);
+            return d >= weekStart && d <= weekEnd && l.status !== 'cancelled';
+        }).length;
 
-    const handleAcceptLesson = async (lessonId: string) => {
+        const pendingRequests = allLessons.filter(l => l.status === 'pending').length;
+
+        const currentMonth = format(now, 'yyyy-MM');
+        const monthlyEarnings = payments
+            .filter(p => p.month === currentMonth)
+            .reduce((sum, p) => sum + p.amount, 0);
+
+        return {
+            totalStudents: subscriptions.length,
+            lessonsThisWeek,
+            pendingRequests,
+            monthlyEarnings,
+        };
+    }, [allLessons, subscriptions, payments]);
+
+    // Today's lessons
+    const todayLessons = useMemo(() => {
+        if (!allLessons) return [];
+        return allLessons
+            .filter(l => isToday(new Date(l.date)) && l.status !== 'cancelled')
+            .sort((a, b) => a.startTime.localeCompare(b.startTime));
+    }, [allLessons]);
+
+    // Pending lesson requests
+    const pendingLessons = useMemo(() => {
+        if (!allLessons) return [];
+        return allLessons.filter(l => l.status === 'pending');
+    }, [allLessons]);
+
+    // User map
+    const userMap = useMemo(() => {
+        if (!users) return new Map();
+        return new Map(users.map(u => [u.id, u]));
+    }, [users]);
+
+    const handleAccept = async (lessonId: string, studentId: string) => {
         try {
-            const lesson = await db.lessons.get(lessonId);
-            if (!lesson) return;
-
             await db.lessons.update(lessonId, { status: 'confirmed' });
-            await notifyLessonConfirmed(lesson.studentId, user?.name || 'Your teacher', lessonId);
-            toast.success('Lesson request accepted');
+            await notifyLessonConfirmed(studentId, currentUser?.name || '', lessonId);
+            toast.success(t('accepted'));
         } catch {
-            toast.error('Failed to accept lesson');
+            toast.error(t('acceptError'));
         }
     };
 
-    const handleRejectLesson = async (lessonId: string) => {
+    const handleReject = async (lessonId: string, studentId: string) => {
         try {
-            const lesson = await db.lessons.get(lessonId);
-            if (!lesson) return;
-
             await db.lessons.update(lessonId, { status: 'rejected' });
-            await notifyLessonCancelled(lesson.studentId, user?.name || 'Your teacher', lessonId);
-            toast.success('Lesson request rejected');
+            await notifyLessonCancelled(studentId, currentUser?.name || '', lessonId);
+            toast.success(t('rejected'));
         } catch {
-            toast.error('Failed to reject lesson');
+            toast.error(t('rejectError'));
         }
     };
 
-    const getStudentName = (studentId: string) => {
-        return allUsers?.find(u => u.id === studentId)?.name || 'Unknown Student';
-    };
+    if (authLoading || userLoading || !stats) {
+        return (
+            <div className="flex h-[50vh] items-center justify-center">
+                <Spinner className="h-8 w-8" />
+            </div>
+        );
+    }
 
-    // Calculate stats
-    const totalStudents = subscriptions?.length || 0;
+    if (!isAuthorized) {
+        return null;
+    }
 
     return (
-        <div className="flex-1 space-y-6 p-8 pt-6">
-            <div className="flex items-center justify-between space-y-2">
-                <h2 className="text-3xl font-bold tracking-tight">Teacher Dashboard</h2>
-            </div>
+        <div className="space-y-6">
+            <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
 
-            {/* Stats Overview */}
+            {/* Stats Grid */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('totalStudents')}</CardTitle>
                         <Users className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{totalStudents}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Subscribed to your profile
-                        </p>
+                        <div className="text-2xl font-bold">{stats.totalStudents}</div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Lessons This Week</CardTitle>
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium">{t('lessonsThisWeek')}</CardTitle>
+                        <BookOpen className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{todaysLessons?.length || 0}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Lessons scheduled this week
-                        </p>
+                        <div className="text-2xl font-bold">{stats.lessonsThisWeek}</div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('pendingRequests')}</CardTitle>
                         <Clock className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{pendingLessons?.length || 0}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Waitng for your approval
-                        </p>
+                        <div className="text-2xl font-bold">{stats.pendingRequests}</div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Monthly Earnings</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('monthlyEarnings')}</CardTitle>
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">$0.00</div>
-                        <p className="text-xs text-muted-foreground">
-                            Estimated for current month
-                        </p>
+                        <div className="text-2xl font-bold">${stats.monthlyEarnings.toFixed(2)}</div>
                     </CardContent>
                 </Card>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-                {/* Today's Schedule */}
-                <Card className="col-span-4">
-                    <CardHeader>
-                        <CardTitle>Today&apos;s Schedule</CardTitle>
-                        <CardDescription>
-                            {format(new Date(), 'EEEE, MMMM do')}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {todaysLessons && todaysLessons.length > 0 ? (
-                                todaysLessons.map((lesson) => (
-                                    <div key={lesson.id} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
-                                        <div className="flex items-center space-x-4">
-                                            <div className="bg-primary/10 p-2 rounded-full text-primary">
-                                                <CalendarDays className="h-4 w-4" />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-medium">{getStudentName(lesson.studentId)}</p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {lesson.startTime} - {lesson.endTime} ({lesson.duration} mins)
-                                                </p>
-                                            </div>
+            {/* Today's Schedule */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>{t('todaySchedule')}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {todayLessons.length === 0 ? (
+                        <p className="text-muted-foreground">{t('noLessonsToday')}</p>
+                    ) : (
+                        <div className="space-y-3">
+                            {todayLessons.map(lesson => {
+                                const student = userMap.get(lesson.studentId);
+                                return (
+                                    <div key={lesson.id} className="flex items-center justify-between rounded-lg border p-3">
+                                        <div>
+                                            <p className="font-medium">
+                                                {t('lessonWith', { name: student?.name || '' })}
+                                            </p>
+                                            <p className="text-sm text-muted-foreground">
+                                                {lesson.startTime} - {lesson.endTime} • {t('duration', { count: lesson.duration })}
+                                            </p>
                                         </div>
-                                        <Badge variant={lesson.status === 'confirmed' ? 'default' : 'secondary'}>
+                                        <Badge variant="outline" className={
+                                            lesson.status === 'confirmed'
+                                                ? 'bg-green-500/10 text-green-600'
+                                                : 'bg-yellow-500/10 text-yellow-600'
+                                        }>
                                             {lesson.status}
                                         </Badge>
                                     </div>
-                                ))
-                            ) : (
-                                <p className="text-sm text-muted-foreground py-4 text-center">No lessons scheduled for today.</p>
-                            )}
+                                );
+                            })}
                         </div>
-                    </CardContent>
-                </Card>
+                    )}
+                </CardContent>
+            </Card>
 
-                {/* Pending Requests */}
-                <Card className="col-span-3">
-                    <CardHeader>
-                        <CardTitle>Pending Requests</CardTitle>
-                        <CardDescription>
-                            Confirm or reject new lesson bookings
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {pendingLessons && pendingLessons.length > 0 ? (
-                                pendingLessons.map((lesson) => (
-                                    <div key={lesson.id} className="flex flex-col space-y-3 p-3 border rounded-lg bg-muted/30">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <p className="text-sm font-semibold">{getStudentName(lesson.studentId)}</p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {format(new Date(lesson.date), 'MMM d, yyyy')}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground font-medium">
-                                                    {lesson.startTime} - {lesson.endTime}
-                                                </p>
-                                            </div>
-                                            <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-200">
-                                                New
-                                            </Badge>
+            {/* Pending Requests */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>{t('pendingLessonRequests')}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {pendingLessons.length === 0 ? (
+                        <p className="text-muted-foreground">{t('noPendingRequests')}</p>
+                    ) : (
+                        <div className="space-y-3">
+                            {pendingLessons.map(lesson => {
+                                const student = userMap.get(lesson.studentId);
+                                return (
+                                    <div key={lesson.id} className="flex items-center justify-between rounded-lg border p-3">
+                                        <div>
+                                            <p className="font-medium">
+                                                {t('lessonWith', { name: student?.name || '' })}
+                                            </p>
+                                            <p className="text-sm text-muted-foreground">
+                                                {format(new Date(lesson.date), 'PPP', { locale: dateFnsLocale })} • {lesson.startTime} - {lesson.endTime}
+                                            </p>
                                         </div>
-                                        <div className="flex space-x-2">
+                                        <div className="flex gap-2">
                                             <Button
                                                 size="sm"
-                                                className="flex-1"
-                                                onClick={() => handleAcceptLesson(lesson.id)}
+                                                variant="outline"
+                                                className="text-green-600"
+                                                onClick={() => handleAccept(lesson.id, lesson.studentId)}
                                             >
-                                                <CheckCircle2 className="mr-2 h-4 w-4" />
-                                                Accept
+                                                <CheckCircle className="mr-1 h-4 w-4" />
+                                                {t('accepted').split(' ')[0]}
                                             </Button>
                                             <Button
                                                 size="sm"
                                                 variant="outline"
-                                                className="flex-1 text-destructive hover:text-destructive"
-                                                onClick={() => handleRejectLesson(lesson.id)}
+                                                className="text-red-600"
+                                                onClick={() => handleReject(lesson.id, lesson.studentId)}
                                             >
-                                                <XCircle className="mr-2 h-4 w-4" />
-                                                Reject
+                                                <XCircle className="mr-1 h-4 w-4" />
+                                                {t('rejected').split(' ')[0]}
                                             </Button>
                                         </div>
                                     </div>
-                                ))
-                            ) : (
-                                <p className="text-sm text-muted-foreground py-4 text-center">No pending requests.</p>
-                            )}
+                                );
+                            })}
                         </div>
-                    </CardContent>
-                </Card>
-            </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     );
 }

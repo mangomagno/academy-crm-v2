@@ -2,6 +2,7 @@
 
 import { Bell } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useTranslations, useLocale } from 'next-intl';
 import { useNotifications, useUnreadNotificationCount } from '@/hooks/use-db';
 import { markNotificationAsRead, markAllNotificationsAsRead } from '@/lib/notifications';
 import { useSession } from 'next-auth/react';
@@ -17,11 +18,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
+import { es, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
 export function NotificationBell() {
     const { data: session } = useSession();
     const router = useRouter();
+    const t = useTranslations('notifications');
+    const locale = useLocale();
+    const dateFnsLocale = locale === 'es' ? es : enUS;
     const userId = session?.user?.id;
     const notifications = useNotifications(userId);
     const unreadCount = useUnreadNotificationCount(userId);
@@ -30,7 +35,6 @@ export function NotificationBell() {
         await markNotificationAsRead(id);
         if (relatedId) {
             // Depending on the relatedId, we might want to navigate
-            // For now, let's just keep it simple
         }
     };
 
@@ -59,7 +63,7 @@ export function NotificationBell() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80">
                 <DropdownMenuLabel className="flex items-center justify-between">
-                    <span>Notifications</span>
+                    <span>{t('title')}</span>
                     {unreadCount > 0 && (
                         <Button
                             variant="ghost"
@@ -67,7 +71,7 @@ export function NotificationBell() {
                             className="text-xs h-7 px-2"
                             onClick={handleMarkAllAsRead}
                         >
-                            Mark all as read
+                            {t('markAllRead')}
                         </Button>
                     )}
                 </DropdownMenuLabel>
@@ -85,13 +89,13 @@ export function NotificationBell() {
                             >
                                 <span className="font-medium text-sm">{notification.message}</span>
                                 <span className="text-xs text-muted-foreground mt-1">
-                                    {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                                    {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true, locale: dateFnsLocale })}
                                 </span>
                             </DropdownMenuItem>
                         ))
                     ) : (
                         <div className="p-4 text-center text-sm text-muted-foreground">
-                            No notifications
+                            {t('noNotifications')}
                         </div>
                     )}
                 </ScrollArea>
@@ -100,7 +104,7 @@ export function NotificationBell() {
                     className="w-full text-center flex justify-center cursor-pointer font-medium"
                     onClick={() => router.push('/notifications')}
                 >
-                    View all notifications
+                    {t('viewAll')}
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
