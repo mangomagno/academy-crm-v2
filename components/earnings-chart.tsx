@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import {
     BarChart,
     Bar,
@@ -12,6 +13,7 @@ import {
     Legend,
 } from 'recharts';
 import { format, subMonths, parse } from 'date-fns';
+import { es, enUS } from 'date-fns/locale';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Payment } from '@/types';
 
@@ -20,8 +22,11 @@ interface EarningsChartProps {
 }
 
 export function EarningsChart({ payments }: EarningsChartProps) {
+    const t = useTranslations('earningsChart');
+    const locale = useLocale();
+    const dateFnsLocale = locale === 'es' ? es : enUS;
+
     const chartData = useMemo(() => {
-        // Last 6 months
         const last6Months = Array.from({ length: 6 }).map((_, i) => {
             const date = subMonths(new Date(), 5 - i);
             return format(date, 'yyyy-MM');
@@ -39,21 +44,19 @@ export function EarningsChart({ payments }: EarningsChartProps) {
             const monthDate = parse(month, 'yyyy-MM', new Date());
 
             return {
-                name: format(monthDate, 'MMM'),
+                name: format(monthDate, 'MMM', { locale: dateFnsLocale }),
                 paid,
                 unpaid,
                 total: paid + unpaid,
             };
         });
-    }, [payments]);
+    }, [payments, dateFnsLocale]);
 
     return (
         <Card className="col-span-4">
             <CardHeader>
-                <CardTitle>Earnings History</CardTitle>
-                <CardDescription>
-                    Earnings across the last 6 months (Paid vs Unpaid)
-                </CardDescription>
+                <CardTitle>{t('title')}</CardTitle>
+                <CardDescription>{t('description')}</CardDescription>
             </CardHeader>
             <CardContent className="pl-2">
                 <div className="h-[350px] w-full">
@@ -86,13 +89,13 @@ export function EarningsChart({ payments }: EarningsChartProps) {
                             <Legend />
                             <Bar
                                 dataKey="paid"
-                                name="Paid"
+                                name={t('paid')}
                                 fill="hsl(var(--primary))"
                                 radius={[4, 4, 0, 0]}
                             />
                             <Bar
                                 dataKey="unpaid"
-                                name="Unpaid"
+                                name={t('unpaid')}
                                 fill="hsl(var(--muted))"
                                 radius={[4, 4, 0, 0]}
                             />

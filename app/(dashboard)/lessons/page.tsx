@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations, useLocale } from 'next-intl';
 import { Calendar, Clock, X, History } from 'lucide-react';
 import { useUpcomingLessons, useUsers } from '@/hooks/use-db';
 import { useCurrentUser, useRequireRole } from '@/hooks/use-auth';
 import { db } from '@/lib/db';
-import { formatDate } from '@/lib/booking-utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +25,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { es, enUS } from 'date-fns/locale';
 import type { LessonStatus } from '@/types';
 
 const STATUS_COLORS: Record<LessonStatus, string> = {
@@ -40,10 +42,14 @@ export default function LessonsPage() {
     const { user: currentUser, loading: userLoading } = useCurrentUser();
     const lessons = useUpcomingLessons(currentUser?.id, 'student');
     const users = useUsers();
+    const t = useTranslations('lessons');
+    const ts = useTranslations('status');
+    const tc = useTranslations('common');
+    const locale = useLocale();
+    const dateFnsLocale = locale === 'es' ? es : enUS;
 
     const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-    // Create user map for teacher lookup
     const userMap = useMemo(() => {
         if (!users) return new Map();
         return new Map(users.map(u => [u.id, u]));
@@ -55,7 +61,6 @@ export default function LessonsPage() {
         try {
             await db.lessons.update(lessonId, { status: 'cancelled' });
 
-            // Notify teacher
             await db.notifications.add({
                 id: crypto.randomUUID(),
                 userId: teacherId,
@@ -66,9 +71,9 @@ export default function LessonsPage() {
                 createdAt: new Date(),
             });
 
-            toast.success('Lesson cancelled');
+            toast.success(t('cancelled'));
         } catch (error) {
-            toast.error('Failed to cancel lesson');
+            toast.error(t('cancelError'));
             console.error(error);
         } finally {
             setCancellingId(null);
@@ -83,21 +88,19 @@ export default function LessonsPage() {
         );
     }
 
-    if (!isAuthorized) {
-        return null;
-    }
+    if (!isAuthorized) return null;
 
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">My Lessons</h1>
-                    <p className="text-muted-foreground">Upcoming and pending lessons</p>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+                    <p className="text-muted-foreground">{t('upcoming')}</p>
                 </div>
                 <Button variant="outline" asChild>
                     <Link href="/lessons/history">
                         <History className="mr-2 h-4 w-4" />
-                        View History
+                        {t('viewHistory')}
                     </Link>
                 </Button>
             </div>
@@ -106,29 +109,28 @@ export default function LessonsPage() {
                 <Empty>
                     <Calendar className="h-12 w-12 text-muted-foreground" />
                     <div>
-                        <h3 className="text-lg font-semibold">No upcoming lessons</h3>
-                        <p className="text-muted-foreground">Book a lesson with one of your teachers to get started.</p>
+                        <h3 className="text-lg font-semibold">{t('noUpcoming')}</h3>
+                        <p className="text-muted-foreground">{t('noUpcomingDesc')}</p>
                     </div>
                     <Button asChild className="mt-4">
-                        <Link href="/my-teachers">View My Teachers</Link>
+                        <Link href="/my-teachers">{t('bookLesson')}</Link>
                     </Button>
                 </Empty>
             ) : (
                 <Card>
                     <CardHeader>
-                        <CardTitle>Upcoming Lessons</CardTitle>
-                        <CardDescription>{lessons.length} lesson{lessons.length !== 1 ? 's' : ''} scheduled</CardDescription>
+                        <CardTitle>{t('upcoming')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Time</TableHead>
-                                    <TableHead>Teacher</TableHead>
-                                    <TableHead>Duration</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
+                                    <TableHead>{t('date')}</TableHead>
+                                    <TableHead>{t('time')}</TableHead>
+                                    <TableHead>{t('teacher')}</TableHead>
+                                    <TableHead>{t('duration')}</TableHead>
+                                    <TableHead>{ts('pending')}</TableHead>
+                                    <TableHead className="text-right"></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -139,7 +141,7 @@ export default function LessonsPage() {
                                     return (
                                         <TableRow key={lesson.id}>
                                             <TableCell className="font-medium">
-                                                {formatDate(new Date(lesson.date))}
+                                                {format(new Date(lesson.date), 'PP', { locale: dateFnsLocale })}
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-1">
@@ -147,14 +149,14 @@ export default function LessonsPage() {
                                                     {lesson.startTime} - {lesson.endTime}
                                                 </div>
                                             </TableCell>
-                                            <TableCell>{teacher?.name || 'Unknown'}</TableCell>
-                                            <TableCell>{lesson.duration} min</TableCell>
+                                            <TableCell>{teacher?.name || tc('unknownUser')}</TableCell>
+                                            <TableCell>{tc('min', { count: lesson.duration })}</TableCell>
                                             <TableCell>
                                                 <Badge
                                                     variant="outline"
                                                     className={STATUS_COLORS[lesson.status]}
                                                 >
-                                                    {lesson.status}
+                                                    {ts(lesson.status)}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
@@ -170,27 +172,25 @@ export default function LessonsPage() {
                                                             ) : (
                                                                 <>
                                                                     <X className="h-4 w-4 mr-1" />
-                                                                    Cancel
+                                                                    {tc('cancel')}
                                                                 </>
                                                             )}
                                                         </Button>
                                                     </AlertDialogTrigger>
                                                     <AlertDialogContent>
                                                         <AlertDialogHeader>
-                                                            <AlertDialogTitle>Cancel this lesson?</AlertDialogTitle>
+                                                            <AlertDialogTitle>{t('cancelConfirmTitle')}</AlertDialogTitle>
                                                             <AlertDialogDescription>
-                                                                This will cancel your lesson with {teacher?.name} on{' '}
-                                                                {formatDate(new Date(lesson.date))} at {lesson.startTime}.
-                                                                The teacher will be notified.
+                                                                {t('cancelConfirmDesc')}
                                                             </AlertDialogDescription>
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter>
-                                                            <AlertDialogCancel>Keep Lesson</AlertDialogCancel>
+                                                            <AlertDialogCancel>{t('keepLesson')}</AlertDialogCancel>
                                                             <AlertDialogAction
                                                                 onClick={() => handleCancel(lesson.id, lesson.teacherId)}
                                                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                                             >
-                                                                Cancel Lesson
+                                                                {t('confirmCancel')}
                                                             </AlertDialogAction>
                                                         </AlertDialogFooter>
                                                     </AlertDialogContent>

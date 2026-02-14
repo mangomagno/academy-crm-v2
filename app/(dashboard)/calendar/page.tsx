@@ -1,6 +1,8 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslations } from 'next-intl';
+import { useLocale } from 'next-intl';
 import {
     useCurrentUser,
     useRequireApprovedTeacher
@@ -15,18 +17,23 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { addDays, subDays, addMonths, subMonths, format } from 'date-fns';
+import { es, enUS } from 'date-fns/locale';
 
 export default function CalendarPage() {
     const { isApproved, loading: authLoading } = useRequireApprovedTeacher();
     const { user } = useCurrentUser();
     const [view, setView] = React.useState<'week' | 'month'>('week');
     const [currentDate, setCurrentDate] = React.useState(new Date());
+    const t = useTranslations('calendar');
+    const tc = useTranslations('common');
+    const locale = useLocale();
+    const dateFnsLocale = locale === 'es' ? es : enUS;
 
     const lessons = useLessons(user?.id);
-    const students = useUsers(); // Filtered to students in the component if needed
+    const students = useUsers();
 
     if (authLoading) {
-        return <div className="p-8">Loading...</div>;
+        return <div className="p-8">{tc('loading')}</div>;
     }
 
     if (!isApproved) return null;
@@ -54,10 +61,10 @@ export default function CalendarPage() {
     return (
         <div className="flex-1 space-y-4 p-8 pt-6">
             <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-bold tracking-tight">Calendar</h2>
+                <h2 className="text-3xl font-bold tracking-tight">{t('title')}</h2>
                 <div className="flex items-center space-x-2">
                     <Button variant="outline" size="sm" onClick={handleToday}>
-                        Today
+                        {tc('today')}
                     </Button>
                     <div className="flex items-center border rounded-md">
                         <Button
@@ -83,12 +90,12 @@ export default function CalendarPage() {
             <Tabs defaultValue="week" className="w-full" onValueChange={(v) => setView(v as 'week' | 'month')}>
                 <div className="flex items-center justify-between mb-4">
                     <TabsList>
-                        <TabsTrigger value="week" className="px-6">Week</TabsTrigger>
-                        <TabsTrigger value="month" className="px-6">Month</TabsTrigger>
+                        <TabsTrigger value="week" className="px-6">{t('weekView')}</TabsTrigger>
+                        <TabsTrigger value="month" className="px-6">{t('monthView')}</TabsTrigger>
                     </TabsList>
                     <div className="text-sm font-medium text-muted-foreground">
                         {view === 'week' ? (
-                            <span>{format(currentDate, 'MMMM yyyy')}</span>
+                            <span>{format(currentDate, 'MMMM yyyy', { locale: dateFnsLocale })}</span>
                         ) : (
                             <span>{format(currentDate, 'yyyy')}</span>
                         )}

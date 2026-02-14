@@ -3,6 +3,7 @@
 import { use, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations, useLocale } from 'next-intl';
 import { ArrowLeft, Calendar, Clock, Check, ChevronRight } from 'lucide-react';
 import { useUserById, useTeacherProfile, useAvailability, useBlockedSlots, useLessons, useIsSubscribed } from '@/hooks/use-db';
 import { useCurrentUser, useRequireRole } from '@/hooks/use-auth';
@@ -12,7 +13,6 @@ import { notifyLessonRequest } from '@/lib/notifications';
 import {
     getAvailableSlots,
     hasAvailableSlots,
-    formatDate,
     getMonthString,
 } from '@/lib/booking-utils';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,8 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { es, enUS } from 'date-fns/locale';
 import type { LessonStatus } from '@/types';
 
 type BookingStep = 'date' | 'time' | 'duration' | 'confirm';
@@ -30,6 +32,10 @@ type BookingStep = 'date' | 'time' | 'duration' | 'confirm';
 export default function BookLessonPage({ params }: { params: Promise<{ teacherId: string }> }) {
     const { teacherId } = use(params);
     const router = useRouter();
+    const t = useTranslations('booking');
+    const tc = useTranslations('common');
+    const locale = useLocale();
+    const dateFnsLocale = locale === 'es' ? es : enUS;
 
     const { isAuthorized, loading: authLoading } = useRequireRole(['student']);
     const { user: currentUser } = useCurrentUser();
@@ -47,7 +53,6 @@ export default function BookLessonPage({ params }: { params: Promise<{ teacherId
     const [notes, setNotes] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Available time slots for selected date and duration
     const availableSlots = useMemo(() => {
         if (!selectedDate || !selectedDuration || !availability || !blockedSlots || !lessons) {
             return [];
@@ -55,32 +60,23 @@ export default function BookLessonPage({ params }: { params: Promise<{ teacherId
         return getAvailableSlots(selectedDate, availability, blockedSlots, lessons, selectedDuration);
     }, [selectedDate, selectedDuration, availability, blockedSlots, lessons]);
 
-    // Calculate price
     const price = useMemo(() => {
         if (!profile || !selectedDuration) return 0;
         return (selectedDuration / 60) * profile.hourlyRate;
     }, [profile, selectedDuration]);
 
-    // Date disabled check for calendar
     const isDateDisabled = (date: Date): boolean => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-
-        // Past dates
         if (date < today) return true;
-
-        // Check if date has any availability
         if (!availability || !blockedSlots || !lessons || !profile?.lessonDurations) return true;
-
         return !hasAvailableSlots(date, availability, blockedSlots, lessons, profile.lessonDurations);
     };
 
     const handleDateSelect = (date: Date | undefined) => {
         setSelectedDate(date);
         setSelectedTime(null);
-        if (date) {
-            setStep('duration');
-        }
+        if (date) setStep('duration');
     };
 
     const handleDurationSelect = (duration: number) => {
@@ -95,16 +91,13 @@ export default function BookLessonPage({ params }: { params: Promise<{ teacherId
     };
 
     const handleConfirm = async () => {
-        if (!currentUser || !selectedDate || !selectedTime || !selectedDuration || !profile) {
-            return;
-        }
+        if (!currentUser || !selectedDate || !selectedTime || !selectedDuration || !profile) return;
 
         setIsSubmitting(true);
         try {
             const lessonId = crypto.randomUUID();
             const lessonStatus: LessonStatus = profile.autoAccept ? 'confirmed' : 'pending';
 
-            // Create the lesson
             await db.lessons.add({
                 id: lessonId,
                 teacherId,
@@ -118,7 +111,6 @@ export default function BookLessonPage({ params }: { params: Promise<{ teacherId
                 createdAt: new Date(),
             });
 
-            // Create payment record
             await db.payments.add({
                 id: crypto.randomUUID(),
                 lessonId,
@@ -129,17 +121,16 @@ export default function BookLessonPage({ params }: { params: Promise<{ teacherId
                 month: getMonthString(selectedDate),
             });
 
-            // Create notification for teacher
             await notifyLessonRequest(teacherId, currentUser.name, lessonId);
 
             toast.success(
                 lessonStatus === 'confirmed'
-                    ? 'Lesson booked successfully!'
-                    : 'Lesson request sent! Awaiting teacher confirmation.'
+                    ? t('bookingConfirmed')
+                    : t('bookingPending')
             );
             router.push('/lessons');
         } catch (error) {
-            toast.error('Failed to book lesson');
+            toast.error(t('bookingError'));
             console.error(error);
         } finally {
             setIsSubmitting(false);
@@ -147,15 +138,9 @@ export default function BookLessonPage({ params }: { params: Promise<{ teacherId
     };
 
     const goBack = () => {
-        if (step === 'time') {
-            setStep('duration');
-            setSelectedTime(null);
-        } else if (step === 'duration') {
-            setStep('date');
-            setSelectedDuration(null);
-        } else if (step === 'confirm') {
-            setStep('time');
-        }
+        if (step === 'time') { setStep('duration'); setSelectedTime(null); }
+        else if (step === 'duration') { setStep('date'); setSelectedDuration(null); }
+        else if (step === 'confirm') { setStep('time'); }
     };
 
     if (authLoading || teacher === undefined || profile === undefined ||
@@ -167,27 +152,22 @@ export default function BookLessonPage({ params }: { params: Promise<{ teacherId
         );
     }
 
-    if (!isAuthorized) {
-        return null;
-    }
+    if (!isAuthorized) return null;
 
-    // Check if teacher exists and student is subscribed
     if (!teacher || !isSubscribed) {
         return (
             <div className="space-y-6">
                 <Button variant="ghost" onClick={() => router.back()}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back
+                    {tc('back')}
                 </Button>
                 <div className="text-center py-12">
-                    <h2 className="text-xl font-semibold">Cannot book lesson</h2>
+                    <h2 className="text-xl font-semibold">{t('cannotBook')}</h2>
                     <p className="text-muted-foreground mt-2">
-                        {!teacher
-                            ? 'Teacher not found.'
-                            : 'You need to subscribe to this teacher first.'}
+                        {!teacher ? t('teacherNotFound') : t('subscribeFirst')}
                     </p>
                     <Button asChild className="mt-4">
-                        <Link href="/teachers">Browse Teachers</Link>
+                        <Link href="/teachers">{t('browseTeachers')}</Link>
                     </Button>
                 </div>
             </div>
@@ -201,8 +181,8 @@ export default function BookLessonPage({ params }: { params: Promise<{ teacherId
                     <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Book Lesson</h1>
-                    <p className="text-muted-foreground">with {teacher.name}</p>
+                    <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+                    <p className="text-muted-foreground">{t('withTeacher', { name: teacher.name })}</p>
                 </div>
             </div>
 
@@ -229,15 +209,14 @@ export default function BookLessonPage({ params }: { params: Promise<{ teacherId
                 ))}
             </div>
 
-            {/* Step 1: Date Selection */}
+            {/* Step 1: Date */}
             {step === 'date' && (
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Calendar className="h-5 w-5" />
-                            Select a Date
+                            {t('selectDate')}
                         </CardTitle>
-                        <CardDescription>Choose a date for your lesson</CardDescription>
                     </CardHeader>
                     <CardContent className="flex justify-center">
                         <CalendarComponent
@@ -246,22 +225,23 @@ export default function BookLessonPage({ params }: { params: Promise<{ teacherId
                             onSelect={handleDateSelect}
                             disabled={isDateDisabled}
                             fromDate={new Date()}
+                            locale={dateFnsLocale}
                             className="rounded-md border"
                         />
                     </CardContent>
                 </Card>
             )}
 
-            {/* Step 2: Duration Selection */}
+            {/* Step 2: Duration */}
             {step === 'duration' && (
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Clock className="h-5 w-5" />
-                            Select Duration
+                            {t('selectDuration')}
                         </CardTitle>
                         <CardDescription>
-                            {selectedDate && formatDate(selectedDate)}
+                            {selectedDate && format(selectedDate, 'PPP', { locale: dateFnsLocale })}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
@@ -272,7 +252,7 @@ export default function BookLessonPage({ params }: { params: Promise<{ teacherId
                                 className="w-full justify-between h-auto py-4"
                                 onClick={() => handleDurationSelect(duration)}
                             >
-                                <span className="font-medium">{duration} minutes</span>
+                                <span className="font-medium">{tc('min', { count: duration })}</span>
                                 <Badge variant="secondary">
                                     ${((duration / 60) * (profile.hourlyRate || 0)).toFixed(2)}
                                 </Badge>
@@ -282,28 +262,28 @@ export default function BookLessonPage({ params }: { params: Promise<{ teacherId
                     <CardFooter>
                         <Button variant="ghost" onClick={goBack}>
                             <ArrowLeft className="mr-2 h-4 w-4" />
-                            Back
+                            {tc('back')}
                         </Button>
                     </CardFooter>
                 </Card>
             )}
 
-            {/* Step 3: Time Selection */}
+            {/* Step 3: Time */}
             {step === 'time' && (
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Clock className="h-5 w-5" />
-                            Select Time
+                            {t('selectTime')}
                         </CardTitle>
                         <CardDescription>
-                            {selectedDate && formatDate(selectedDate)} • {selectedDuration} min
+                            {selectedDate && format(selectedDate, 'PPP', { locale: dateFnsLocale })} • {selectedDuration} min
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         {availableSlots.length === 0 ? (
                             <p className="text-muted-foreground text-center py-4">
-                                No available time slots for this date and duration.
+                                {t('noSlots')}
                             </p>
                         ) : (
                             <div className="grid grid-cols-3 gap-2">
@@ -328,50 +308,49 @@ export default function BookLessonPage({ params }: { params: Promise<{ teacherId
                     <CardFooter>
                         <Button variant="ghost" onClick={goBack}>
                             <ArrowLeft className="mr-2 h-4 w-4" />
-                            Back
+                            {tc('back')}
                         </Button>
                     </CardFooter>
                 </Card>
             )}
 
-            {/* Step 4: Confirmation */}
+            {/* Step 4: Confirm */}
             {step === 'confirm' && selectedDate && selectedTime && selectedDuration && (
                 <Card>
                     <CardHeader>
-                        <CardTitle>Confirm Booking</CardTitle>
-                        <CardDescription>Review your lesson details</CardDescription>
+                        <CardTitle>{t('confirmBooking')}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="rounded-lg border p-4 space-y-3">
                             <div className="flex justify-between">
-                                <span className="text-muted-foreground">Teacher</span>
+                                <span className="text-muted-foreground">{t('teacher')}</span>
                                 <span className="font-medium">{teacher.name}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-muted-foreground">Date</span>
-                                <span className="font-medium">{formatDate(selectedDate)}</span>
+                                <span className="text-muted-foreground">{t('date')}</span>
+                                <span className="font-medium">{format(selectedDate, 'PPP', { locale: dateFnsLocale })}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-muted-foreground">Time</span>
+                                <span className="text-muted-foreground">{t('time')}</span>
                                 <span className="font-medium">
                                     {selectedTime.startTime} - {selectedTime.endTime}
                                 </span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-muted-foreground">Duration</span>
-                                <span className="font-medium">{selectedDuration} minutes</span>
+                                <span className="text-muted-foreground">{t('duration')}</span>
+                                <span className="font-medium">{tc('min', { count: selectedDuration })}</span>
                             </div>
                             <div className="flex justify-between border-t pt-3">
-                                <span className="font-medium">Total</span>
+                                <span className="font-medium">{t('total')}</span>
                                 <span className="font-bold text-lg">${price.toFixed(2)}</span>
                             </div>
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="notes">Notes (optional)</Label>
+                            <Label htmlFor="notes">{t('notesLabel')}</Label>
                             <Textarea
                                 id="notes"
-                                placeholder="Any special requests or topics you'd like to cover..."
+                                placeholder={t('notesPlaceholder')}
                                 value={notes}
                                 onChange={e => setNotes(e.target.value)}
                                 rows={3}
@@ -380,25 +359,25 @@ export default function BookLessonPage({ params }: { params: Promise<{ teacherId
 
                         {!profile?.autoAccept && (
                             <p className="text-sm text-muted-foreground bg-muted rounded-lg p-3">
-                                ℹ️ This lesson will require teacher confirmation before it&apos;s finalized.
+                                ℹ️ {t('pendingNote')}
                             </p>
                         )}
                     </CardContent>
                     <CardFooter className="flex justify-between">
                         <Button variant="ghost" onClick={goBack} disabled={isSubmitting}>
                             <ArrowLeft className="mr-2 h-4 w-4" />
-                            Back
+                            {tc('back')}
                         </Button>
                         <Button onClick={handleConfirm} disabled={isSubmitting}>
                             {isSubmitting ? (
                                 <>
                                     <Spinner className="mr-2 h-4 w-4" />
-                                    Booking...
+                                    {t('submitting')}
                                 </>
                             ) : (
                                 <>
                                     <Check className="mr-2 h-4 w-4" />
-                                    Confirm Booking
+                                    {t('confirmBooking')}
                                 </>
                             )}
                         </Button>

@@ -1,46 +1,34 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import { useRequireRole } from '@/hooks/use-auth';
 import { useUsers, usePayments } from '@/hooks/use-db';
 import type { PaymentStatus } from '@/types';
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+    Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
+    Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+    Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import {
-    Search,
-    User,
-    GraduationCap,
-    FilterX
-} from 'lucide-react';
+import { Search, User, GraduationCap, FilterX } from 'lucide-react';
 import { format } from 'date-fns';
+import { es, enUS } from 'date-fns/locale';
 
 export default function AdminPaymentsPage() {
     const { isAuthorized, loading: authLoading } = useRequireRole(['admin']);
     const allUsers = useUsers();
     const allPayments = usePayments();
+    const t = useTranslations('admin');
+    const tc = useTranslations('common');
+    const locale = useLocale();
+    const dateFnsLocale = locale === 'es' ? es : enUS;
 
     const [searchQuery, setSearchQuery] = React.useState('');
     const [statusFilter, setStatusFilter] = React.useState<string>('all');
@@ -49,15 +37,12 @@ export default function AdminPaymentsPage() {
     const [monthFilter, setMonthFilter] = React.useState<string>('all');
 
     if (authLoading) {
-        return <div className="p-8">Loading...</div>;
+        return <div className="p-8">{tc('loading')}</div>;
     }
 
-    if (!isAuthorized) {
-        return null;
-    }
+    if (!isAuthorized) return null;
 
     const teachers = allUsers?.filter(u => u.role === 'teacher') || [];
-    // Extract unique months from payments
     const uniqueMonths = Array.from(new Set(allPayments?.map(p => p.month) || [])).sort().reverse();
 
     const filteredPayments = allPayments?.filter(payment => {
@@ -77,15 +62,15 @@ export default function AdminPaymentsPage() {
     });
 
     const getUserName = (userId: string) => {
-        return allUsers?.find(u => u.id === userId)?.name || 'Unknown User';
+        return allUsers?.find(u => u.id === userId)?.name || tc('unknownUser');
     };
 
     const getStatusBadge = (status: PaymentStatus) => {
         switch (status) {
             case 'paid':
-                return <Badge className="bg-green-100 text-green-800 border-green-200">Paid</Badge>;
+                return <Badge className="bg-green-100 text-green-800 border-green-200">{t('paid')}</Badge>;
             case 'unpaid':
-                return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Unpaid</Badge>;
+                return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">{t('unpaid')}</Badge>;
             default:
                 return <Badge variant="outline">{status}</Badge>;
         }
@@ -101,21 +86,18 @@ export default function AdminPaymentsPage() {
 
     const formatMonth = (monthStr: string) => {
         const [year, month] = monthStr.split('-');
-        return format(new Date(parseInt(year), parseInt(month) - 1), 'MMMM yyyy');
+        return format(new Date(parseInt(year), parseInt(month) - 1), 'MMMM yyyy', { locale: dateFnsLocale });
     };
 
     return (
         <div className="flex-1 space-y-6 p-8 pt-6">
             <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-bold tracking-tight">All Payments</h2>
+                <h2 className="text-3xl font-bold tracking-tight">{t('allPayments')}</h2>
             </div>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Global Payment Logs</CardTitle>
-                    <CardDescription>
-                        Track all student-to-teacher payments across the platform.
-                    </CardDescription>
+                    <CardTitle>{t('paymentLogs')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4 mb-6">
@@ -123,7 +105,7 @@ export default function AdminPaymentsPage() {
                             <div className="relative flex-1">
                                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                    placeholder="Search by teacher or student..."
+                                    placeholder={tc('search')}
                                     className="pl-8"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -132,10 +114,10 @@ export default function AdminPaymentsPage() {
                             <div className="flex flex-wrap gap-2">
                                 <Select value={monthFilter} onValueChange={setMonthFilter}>
                                     <SelectTrigger className="w-[150px]">
-                                        <SelectValue placeholder="Month" />
+                                        <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All Months</SelectItem>
+                                        <SelectItem value="all">{t('allMonths')}</SelectItem>
                                         {uniqueMonths.map(m => (
                                             <SelectItem key={m} value={m}>{formatMonth(m)}</SelectItem>
                                         ))}
@@ -144,28 +126,28 @@ export default function AdminPaymentsPage() {
 
                                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                                     <SelectTrigger className="w-[120px]">
-                                        <SelectValue placeholder="Status" />
+                                        <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">All Status</SelectItem>
-                                        <SelectItem value="paid">Paid</SelectItem>
-                                        <SelectItem value="unpaid">Unpaid</SelectItem>
+                                        <SelectItem value="all">{t('allStatus')}</SelectItem>
+                                        <SelectItem value="paid">{t('paid')}</SelectItem>
+                                        <SelectItem value="unpaid">{t('unpaid')}</SelectItem>
                                     </SelectContent>
                                 </Select>
 
                                 <Select value={teacherFilter} onValueChange={setTeacherFilter}>
                                     <SelectTrigger className="w-[150px]">
-                                        <SelectValue placeholder="Teacher" />
+                                        <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="all">Teachers</SelectItem>
-                                        {teachers.map(t => (
-                                            <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                                        <SelectItem value="all">{t('allTeachers')}</SelectItem>
+                                        {teachers.map(teacher => (
+                                            <SelectItem key={teacher.id} value={teacher.id}>{teacher.name}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
 
-                                <Button variant="ghost" size="icon" onClick={resetFilters} title="Reset Filters">
+                                <Button variant="ghost" size="icon" onClick={resetFilters}>
                                     <FilterX className="h-4 w-4" />
                                 </Button>
                             </div>
@@ -176,12 +158,12 @@ export default function AdminPaymentsPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Month</TableHead>
-                                    <TableHead>Teacher</TableHead>
-                                    <TableHead>Student</TableHead>
-                                    <TableHead>Amount</TableHead>
+                                    <TableHead>{t('monthCol')}</TableHead>
+                                    <TableHead>{t('teacherCol')}</TableHead>
+                                    <TableHead>{t('studentCol')}</TableHead>
+                                    <TableHead>{t('amountCol')}</TableHead>
                                     <TableHead>Status</TableHead>
-                                    <TableHead>Paid At</TableHead>
+                                    <TableHead>{t('paidAt')}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -210,14 +192,14 @@ export default function AdminPaymentsPage() {
                                                 {getStatusBadge(payment.status)}
                                             </TableCell>
                                             <TableCell className="text-muted-foreground text-xs">
-                                                {payment.paidAt ? format(new Date(payment.paidAt), 'MMM d, yyyy') : '-'}
+                                                {payment.paidAt ? format(new Date(payment.paidAt), 'PP', { locale: dateFnsLocale }) : '-'}
                                             </TableCell>
                                         </TableRow>
                                     ))
                                 ) : (
                                     <TableRow>
                                         <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                                            No payments found matching your filters.
+                                            {t('noResults')}
                                         </TableCell>
                                     </TableRow>
                                 )}

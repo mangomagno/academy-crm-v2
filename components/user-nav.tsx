@@ -2,6 +2,7 @@
 
 import { signOut } from 'next-auth/react';
 import { useTheme } from 'next-themes';
+import { useTranslations } from 'next-intl';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -16,6 +17,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { LogOut, Moon, Sun, User } from 'lucide-react';
 import { useCurrentUser } from '@/hooks/use-auth';
+import { LanguageSwitcher } from '@/components/language-switcher';
 
 function getInitials(name: string): string {
     return name
@@ -40,6 +42,7 @@ function getRoleBadgeVariant(role: string): "default" | "secondary" | "outline" 
 export function UserNav() {
     const { user, loading } = useCurrentUser();
     const { theme, setTheme } = useTheme();
+    const t = useTranslations('common');
 
     if (loading || !user) {
         return (
@@ -82,20 +85,21 @@ export function UserNav() {
                         {theme === 'dark' ? (
                             <>
                                 <Sun className="mr-2 h-4 w-4" />
-                                <span>Light mode</span>
+                                <span>{t('lightMode')}</span>
                             </>
                         ) : (
                             <>
                                 <Moon className="mr-2 h-4 w-4" />
-                                <span>Dark mode</span>
+                                <span>{t('darkMode')}</span>
                             </>
                         )}
                     </DropdownMenuItem>
+                    <LanguageSwitcher />
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/login' })}>
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>Sign out</span>
+                    <span>{t('signOut')}</span>
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

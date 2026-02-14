@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,6 +25,7 @@ import type { UserRole } from '@/types';
 
 export default function RegisterPage() {
     const router = useRouter();
+    const t = useTranslations('auth');
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -35,12 +37,12 @@ export default function RegisterPage() {
         e.preventDefault();
 
         if (password !== confirmPassword) {
-            toast.error('Passwords do not match');
+            toast.error(t('passwordMismatch'));
             return;
         }
 
         if (password.length < 6) {
-            toast.error('Password must be at least 6 characters');
+            toast.error(t('passwordMismatch'));
             return;
         }
 
@@ -50,7 +52,7 @@ export default function RegisterPage() {
             // Check if email already exists
             const existingUser = await db.users.where('email').equals(email).first();
             if (existingUser) {
-                toast.error('An account with this email already exists');
+                toast.error(t('emailExists'));
                 setIsLoading(false);
                 return;
             }
@@ -79,7 +81,7 @@ export default function RegisterPage() {
                 });
             }
 
-            toast.success('Account created successfully');
+            toast.success(t('registerSuccess'));
 
             // Auto-login with verified user data
             const teacherStatus = role === 'teacher' ? 'pending' : '';
@@ -106,7 +108,7 @@ export default function RegisterPage() {
             }
         } catch (error) {
             console.error('Registration error:', error);
-            toast.error('An error occurred. Please try again.');
+            toast.error(t('registerError'));
             setIsLoading(false);
         }
     };
@@ -114,15 +116,15 @@ export default function RegisterPage() {
     return (
         <Card className="w-full max-w-md">
             <CardHeader className="space-y-1">
-                <CardTitle className="text-2xl">Create an account</CardTitle>
+                <CardTitle className="text-2xl">{t('createAccount')}</CardTitle>
                 <CardDescription>
-                    Enter your information to get started
+                    {t('fullName')}, {t('email')}, {t('password')}
                 </CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmit}>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="name">Full Name</Label>
+                        <Label htmlFor="name">{t('fullName')}</Label>
                         <Input
                             id="name"
                             type="text"
@@ -134,7 +136,7 @@ export default function RegisterPage() {
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
+                        <Label htmlFor="email">{t('email')}</Label>
                         <Input
                             id="email"
                             type="email"
@@ -146,7 +148,7 @@ export default function RegisterPage() {
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
+                        <Label htmlFor="password">{t('password')}</Label>
                         <Input
                             id="password"
                             type="password"
@@ -158,7 +160,7 @@ export default function RegisterPage() {
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="confirmPassword">Confirm Password</Label>
+                        <Label htmlFor="confirmPassword">{t('confirmPassword')}</Label>
                         <Input
                             id="confirmPassword"
                             type="password"
@@ -170,7 +172,7 @@ export default function RegisterPage() {
                         />
                     </div>
                     <div className="space-y-3">
-                        <Label>I am a...</Label>
+                        <Label>{t('iAmA')}</Label>
                         <RadioGroup
                             value={role}
                             onValueChange={(value) => setRole(value as 'student' | 'teacher')}
@@ -179,21 +181,16 @@ export default function RegisterPage() {
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="student" id="student" />
                                 <Label htmlFor="student" className="font-normal cursor-pointer">
-                                    Student looking for music lessons
+                                    {t('studentRole')}
                                 </Label>
                             </div>
                             <div className="flex items-center space-x-2">
                                 <RadioGroupItem value="teacher" id="teacher" />
                                 <Label htmlFor="teacher" className="font-normal cursor-pointer">
-                                    Teacher offering music lessons
+                                    {t('teacherRole')}
                                 </Label>
                             </div>
                         </RadioGroup>
-                        {role === 'teacher' && (
-                            <p className="text-sm text-muted-foreground">
-                                Note: Teacher accounts require admin approval before you can start accepting students.
-                            </p>
-                        )}
                     </div>
                 </CardContent>
                 <CardFooter className="flex flex-col space-y-4">
@@ -201,16 +198,16 @@ export default function RegisterPage() {
                         {isLoading ? (
                             <>
                                 <Spinner className="mr-2" />
-                                Creating account...
+                                {t('creatingAccount')}
                             </>
                         ) : (
-                            'Create account'
+                            t('createAccount')
                         )}
                     </Button>
                     <p className="text-sm text-muted-foreground text-center">
-                        Already have an account?{' '}
+                        {t('hasAccount')}{' '}
                         <Link href="/login" className="text-primary hover:underline">
-                            Sign in
+                            {t('loginLink')}
                         </Link>
                     </p>
                 </CardFooter>

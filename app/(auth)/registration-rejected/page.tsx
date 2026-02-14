@@ -1,48 +1,31 @@
 'use client';
 
 import { signOut } from 'next-auth/react';
+import { useTranslations } from 'next-intl';
+import { XCircle, LogOut } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import { XCircle } from 'lucide-react';
 
 export default function RegistrationRejectedPage() {
+    const t = useTranslations('auth');
+
     return (
-        <Card className="w-full max-w-md text-center">
-            <CardHeader className="space-y-1">
-                <div className="flex justify-center mb-4">
-                    <div className="rounded-full bg-red-100 p-4 dark:bg-red-900/30">
-                        <XCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
-                    </div>
+        <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                    <XCircle className="h-6 w-6 text-red-600" />
                 </div>
-                <CardTitle className="text-2xl">Registration Rejected</CardTitle>
+                <CardTitle className="text-2xl">{t('registrationRejected')}</CardTitle>
                 <CardDescription>
-                    Your teacher application was not approved
+                    {t('registrationRejectedDesc')}
                 </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-                <p className="text-muted-foreground">
-                    We&apos;re sorry, but your teacher registration has been rejected.
-                </p>
-                <p className="text-muted-foreground">
-                    If you believe this was a mistake or would like more information,
-                    please contact support for assistance.
-                </p>
-            </CardContent>
-            <CardFooter className="flex justify-center">
-                <Button
-                    variant="outline"
-                    onClick={() => signOut({ callbackUrl: '/login' })}
-                >
-                    Sign out
+            <CardContent className="flex justify-center">
+                <Button variant="outline" onClick={() => signOut({ callbackUrl: '/login' })}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    {t('signOut')}
                 </Button>
-            </CardFooter>
+            </CardContent>
         </Card>
     );
 }

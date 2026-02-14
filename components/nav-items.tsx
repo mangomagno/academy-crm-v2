@@ -1,51 +1,58 @@
+'use client';
+
 import {
+    LayoutDashboard,
+    CalendarDays,
     Users,
-    Calendar,
-    GraduationCap,
     Clock,
     DollarSign,
-    Home,
+    GraduationCap,
+    BookOpen,
     History,
-    type LucideIcon
+    ShieldCheck,
+    UserCog,
+    CreditCard,
 } from 'lucide-react';
-import type { UserRole } from '@/types';
+import { useTranslations } from 'next-intl';
 
 export interface NavItem {
     title: string;
     href: string;
-    icon: LucideIcon;
+    icon: React.ComponentType<{ className?: string }>;
 }
 
-export const studentNavItems: NavItem[] = [
-    { title: 'Browse Teachers', href: '/teachers', icon: Users },
-    { title: 'My Teachers', href: '/my-teachers', icon: GraduationCap },
-    { title: 'My Lessons', href: '/lessons', icon: Calendar },
-    { title: 'History', href: '/lessons/history', icon: History },
-];
+export function useNavItems(role: string): NavItem[] {
+    const t = useTranslations('nav');
 
-export const teacherNavItems: NavItem[] = [
-    { title: 'Dashboard', href: '/dashboard', icon: Home },
-    { title: 'Calendar', href: '/calendar', icon: Calendar },
-    { title: 'Students', href: '/students', icon: Users },
-    { title: 'Availability', href: '/availability', icon: Clock },
-    { title: 'Finance', href: '/finance', icon: DollarSign },
-];
+    const studentItems: NavItem[] = [
+        { title: t('browseTeachers'), href: '/teachers', icon: GraduationCap },
+        { title: t('myTeachers'), href: '/my-teachers', icon: Users },
+        { title: t('myLessons'), href: '/lessons', icon: BookOpen },
+        { title: t('history'), href: '/lessons/history', icon: History },
+    ];
 
-export const adminNavItems: NavItem[] = [
-    { title: 'Dashboard', href: '/admin', icon: Home },
-    { title: 'Users', href: '/admin/users', icon: Users },
-    { title: 'All Lessons', href: '/admin/lessons', icon: Calendar },
-    { title: 'All Payments', href: '/admin/payments', icon: DollarSign },
-];
+    const teacherItems: NavItem[] = [
+        { title: t('dashboard'), href: '/dashboard', icon: LayoutDashboard },
+        { title: t('calendar'), href: '/calendar', icon: CalendarDays },
+        { title: t('students'), href: '/students', icon: Users },
+        { title: t('availability'), href: '/availability', icon: Clock },
+        { title: t('finance'), href: '/finance', icon: DollarSign },
+    ];
 
-export function getNavItemsForRole(role: UserRole): NavItem[] {
+    const adminItems: NavItem[] = [
+        { title: t('admin'), href: '/admin', icon: ShieldCheck },
+        { title: t('users'), href: '/admin/users', icon: UserCog },
+        { title: t('allLessons'), href: '/admin/lessons', icon: BookOpen },
+        { title: t('allPayments'), href: '/admin/payments', icon: CreditCard },
+    ];
+
     switch (role) {
-        case 'admin':
-            return adminNavItems;
-        case 'teacher':
-            return teacherNavItems;
         case 'student':
-            return studentNavItems;
+            return studentItems;
+        case 'teacher':
+            return teacherItems;
+        case 'admin':
+            return adminItems;
         default:
             return [];
     }

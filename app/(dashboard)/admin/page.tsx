@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import { useRequireRole } from '@/hooks/use-auth';
 import {
     useUsers,
@@ -29,117 +30,106 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, isSameMonth } from 'date-fns';
+import { es, enUS } from 'date-fns/locale';
 import Link from 'next/link';
 
 export default function AdminDashboardPage() {
     const { isAuthorized, loading: authLoading } = useRequireRole(['admin']);
+    const t = useTranslations('admin');
+    const tc = useTranslations('common');
+    const locale = useLocale();
+    const dateFnsLocale = locale === 'es' ? es : enUS;
 
-    // Fetch all data for stats
     const allUsers = useUsers();
     const pendingTeachers = useTeachers('pending');
     const allLessons = useLessons();
     const allPayments = usePayments();
 
     if (authLoading) {
-        return <div className="p-8">Loading...</div>;
+        return <div className="p-8">{tc('loading')}</div>;
     }
 
-    if (!isAuthorized) {
-        return null; // Hook will redirect
-    }
+    if (!isAuthorized) return null;
 
     const handleApproveTeacher = async (userId: string) => {
         try {
             await db.users.update(userId, { teacherStatus: 'approved' });
-            toast.success('Teacher approved successfully');
+            toast.success(t('teacherApproved'));
         } catch {
-            toast.error('Failed to approve teacher');
+            toast.error(t('teacherApproveError'));
         }
     };
 
     const handleRejectTeacher = async (userId: string) => {
         try {
             await db.users.update(userId, { teacherStatus: 'rejected' });
-            toast.success('Teacher registration rejected');
+            toast.success(t('teacherRejected'));
         } catch {
-            toast.error('Failed to reject teacher');
+            toast.error(t('teacherRejectError'));
         }
     };
 
-    // Calculate stats
     const totalStudents = allUsers?.filter(u => u.role === 'student').length || 0;
     const totalTeachers = allUsers?.filter(u => u.role === 'teacher' && u.teacherStatus === 'approved').length || 0;
-
     const now = new Date();
     const lessonsThisMonth = allLessons?.filter(l => isSameMonth(new Date(l.date), now)).length || 0;
-
     const totalRevenue = allPayments?.reduce((sum, p) => sum + p.amount, 0) || 0;
-
-    // Recent Activity (last 5 lessons)
     const recentLessons = allLessons?.slice(-5).reverse() || [];
 
     const getUserName = (userId: string) => {
-        return allUsers?.find(u => u.id === userId)?.name || 'Unknown User';
+        return allUsers?.find(u => u.id === userId)?.name || tc('unknownUser');
     };
 
     return (
         <div className="flex-1 space-y-6 p-8 pt-6">
             <div className="flex items-center justify-between space-y-2">
-                <h2 className="text-3xl font-bold tracking-tight">Admin Dashboard</h2>
+                <h2 className="text-3xl font-bold tracking-tight">{t('title')}</h2>
             </div>
 
-            {/* Platform Stats */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('totalStudents')}</CardTitle>
                         <Users className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{totalStudents}</div>
-                        <p className="text-xs text-muted-foreground">Active platform students</p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Approved Teachers</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('approvedTeachers')}</CardTitle>
                         <UserCheck className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{totalTeachers}</div>
-                        <p className="text-xs text-muted-foreground">Certified music teachers</p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Lessons This Month</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('lessonsThisMonth')}</CardTitle>
                         <Calendar className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{lessonsThisMonth}</div>
-                        <p className="text-xs text-muted-foreground">Scheduled lessons globally</p>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('totalRevenue')}</CardTitle>
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">${totalRevenue.toFixed(2)}</div>
-                        <p className="text-xs text-muted-foreground">Gross lesson payments</p>
                     </CardContent>
                 </Card>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-                {/* Pending Approvals */}
                 <Card className="col-span-4">
                     <CardHeader>
-                        <CardTitle>Pending Teacher Approvals</CardTitle>
-                        <CardDescription>
-                            Review and approve new teacher registrations
-                        </CardDescription>
+                        <CardTitle>{t('pendingApprovals')}</CardTitle>
+                        <CardDescription>{t('pendingApprovalsDesc')}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
@@ -150,7 +140,7 @@ export default function AdminDashboardPage() {
                                             <p className="text-sm font-semibold">{teacher.name}</p>
                                             <p className="text-xs text-muted-foreground">{teacher.email}</p>
                                             <p className="text-xs text-muted-foreground mt-1">
-                                                Joined: {format(new Date(teacher.createdAt), 'MMM d, yyyy')}
+                                                {format(new Date(teacher.createdAt), 'PPP', { locale: dateFnsLocale })}
                                             </p>
                                         </div>
                                         <div className="flex space-x-2">
@@ -161,7 +151,7 @@ export default function AdminDashboardPage() {
                                                 onClick={() => handleRejectTeacher(teacher.id)}
                                             >
                                                 <XCircle className="mr-2 h-4 w-4" />
-                                                Reject
+                                                {t('reject')}
                                             </Button>
                                             <Button
                                                 size="sm"
@@ -169,7 +159,7 @@ export default function AdminDashboardPage() {
                                                 onClick={() => handleApproveTeacher(teacher.id)}
                                             >
                                                 <CheckCircle2 className="mr-2 h-4 w-4" />
-                                                Approve
+                                                {t('approve')}
                                             </Button>
                                         </div>
                                     </div>
@@ -177,23 +167,21 @@ export default function AdminDashboardPage() {
                             ) : (
                                 <div className="flex flex-col items-center justify-center py-12 text-center">
                                     <Clock className="h-10 w-10 text-muted-foreground/50 mb-4" />
-                                    <p className="text-sm text-muted-foreground">No pending approvals at the moment.</p>
+                                    <p className="text-sm text-muted-foreground">{t('noPending')}</p>
                                 </div>
                             )}
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Recent Activity */}
                 <Card className="col-span-3">
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div>
-                            <CardTitle>Recent Activity</CardTitle>
-                            <CardDescription>Latest platform activity</CardDescription>
+                            <CardTitle>{t('recentActivity')}</CardTitle>
                         </div>
                         <Button variant="ghost" size="sm" asChild>
                             <Link href="/admin/lessons">
-                                View All <ArrowRight className="ml-2 h-4 w-4" />
+                                {t('viewAll')} <ArrowRight className="ml-2 h-4 w-4" />
                             </Link>
                         </Button>
                     </CardHeader>
@@ -207,19 +195,19 @@ export default function AdminDashboardPage() {
                                         </div>
                                         <div className="space-y-1">
                                             <p className="text-sm font-medium leading-none">
-                                                New Lesson Booked
+                                                {t('newLessonBooked')}
                                             </p>
                                             <p className="text-xs text-muted-foreground">
-                                                {getUserName(lesson.studentId)} with {getUserName(lesson.teacherId)}
+                                                {getUserName(lesson.studentId)} – {getUserName(lesson.teacherId)}
                                             </p>
                                             <p className="text-[10px] text-muted-foreground">
-                                                {format(new Date(lesson.createdAt), 'MMM d, h:mm a')}
+                                                {format(new Date(lesson.createdAt), 'PPp', { locale: dateFnsLocale })}
                                             </p>
                                         </div>
                                     </div>
                                 ))
                             ) : (
-                                <p className="text-sm text-muted-foreground py-4 text-center">No recent activity.</p>
+                                <p className="text-sm text-muted-foreground py-4 text-center">{t('noActivity')}</p>
                             )}
                         </div>
                     </CardContent>

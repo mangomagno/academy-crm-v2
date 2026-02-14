@@ -1,13 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+    Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -17,12 +13,15 @@ import { toast } from 'sonner';
 
 interface BillingTableProps {
     payments: Payment[];
-    students: User[];
+    users: User[];
     lessons: Lesson[];
-    month: string;
+    teacherId: string;
 }
 
-export function BillingTable({ payments, students, lessons, month }: BillingTableProps) {
+export function BillingTable({ payments, users, lessons, teacherId }: BillingTableProps) {
+    const t = useTranslations('billingTable');
+    const tc = useTranslations('common');
+
     const billingData = useMemo(() => {
         const studentMap = new Map<string, {
             studentName: string;
@@ -34,16 +33,16 @@ export function BillingTable({ payments, students, lessons, month }: BillingTabl
         }>();
 
         payments.forEach((p) => {
-            const student = students.find((s) => s.id === p.studentId);
+            const student = users.find((s: User) => s.id === p.studentId);
             const lesson = lessons.find((l) => l.id === p.lessonId);
 
             const existing = studentMap.get(p.studentId) || {
-                studentName: student?.name || 'Unknown Student',
+                studentName: student?.name || tc('unknownStudent'),
                 lessonCount: 0,
                 totalDuration: 0,
                 amountDue: 0,
                 paymentIds: [],
-                isPaid: true, // We'll set to false if any payment is unpaid
+                isPaid: true,
             };
 
             existing.lessonCount += 1;
@@ -58,23 +57,23 @@ export function BillingTable({ payments, students, lessons, month }: BillingTabl
         });
 
         return Array.from(studentMap.values());
-    }, [payments, students, lessons]);
+    }, [payments, users, lessons, tc]);
 
     const handleToggleStatus = async (paymentIds: string[], currentStatus: boolean) => {
         try {
             const newStatus = currentStatus ? 'unpaid' : 'paid';
             await Promise.all(paymentIds.map((id) => db.updatePaymentStatus(id, newStatus)));
-            toast.success(`Marked as ${newStatus}`);
+            toast.success(currentStatus ? t('markUnpaid') : t('markPaid'));
         } catch (error) {
             console.error('Failed to update payment status:', error);
-            toast.error('Failed to update payment status');
+            toast.error(tc('noResults'));
         }
     };
 
     if (billingData.length === 0) {
         return (
             <div className="flex h-[200px] items-center justify-center rounded-md border border-dashed text-muted-foreground">
-                No billing data for {month}
+                {t('noBilling')}
             </div>
         );
     }
@@ -84,12 +83,12 @@ export function BillingTable({ payments, students, lessons, month }: BillingTabl
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Student</TableHead>
-                        <TableHead>Lessons</TableHead>
-                        <TableHead>Total Duration</TableHead>
-                        <TableHead>Amount Due</TableHead>
+                        <TableHead>{t('student')}</TableHead>
+                        <TableHead>{t('lessons')}</TableHead>
+                        <TableHead>{t('totalDuration')}</TableHead>
+                        <TableHead>{t('amount')}</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead className="w-[100px] text-right">Paid</TableHead>
+                        <TableHead className="w-[100px] text-right">{t('paid')}</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -97,11 +96,11 @@ export function BillingTable({ payments, students, lessons, month }: BillingTabl
                         <TableRow key={row.studentName}>
                             <TableCell className="font-medium">{row.studentName}</TableCell>
                             <TableCell>{row.lessonCount}</TableCell>
-                            <TableCell>{row.totalDuration} mins</TableCell>
+                            <TableCell>{tc('min', { count: row.totalDuration })}</TableCell>
                             <TableCell>${row.amountDue.toFixed(2)}</TableCell>
                             <TableCell>
                                 <Badge variant={row.isPaid ? 'default' : 'secondary'}>
-                                    {row.isPaid ? 'Paid' : 'Unpaid'}
+                                    {row.isPaid ? t('paid') : t('unpaid')}
                                 </Badge>
                             </TableCell>
                             <TableCell className="text-right">

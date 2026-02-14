@@ -2,6 +2,7 @@
 
 import { use, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { ArrowLeft, Clock, DollarSign, Calendar, UserPlus, UserMinus } from 'lucide-react';
 import { useUserById, useTeacherProfile, useAvailability, useIsSubscribed } from '@/hooks/use-db';
 import { useCurrentUser, useRequireRole } from '@/hooks/use-auth';
@@ -13,12 +14,15 @@ import { Spinner } from '@/components/ui/spinner';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 
-const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
 
 export default function TeacherProfilePage({ params }: { params: Promise<{ id: string }> }) {
     const { id: teacherId } = use(params);
     const router = useRouter();
     const [isSubscribing, setIsSubscribing] = useState(false);
+    const t = useTranslations('teacherProfile');
+    const td = useTranslations('days');
+    const tc = useTranslations('common');
 
     const { isAuthorized, loading: authLoading } = useRequireRole(['student']);
     const { user: currentUser } = useCurrentUser();
@@ -27,7 +31,6 @@ export default function TeacherProfilePage({ params }: { params: Promise<{ id: s
     const availability = useAvailability(teacherId);
     const isSubscribed = useIsSubscribed(currentUser?.id, teacherId);
 
-    // Group availability by day of week
     const availabilityByDay = useMemo(() => {
         if (!availability) return new Map<number, { startTime: string; endTime: string }[]>();
         const map = new Map<number, { startTime: string; endTime: string }[]>();
@@ -49,9 +52,9 @@ export default function TeacherProfilePage({ params }: { params: Promise<{ id: s
                 teacherId,
                 createdAt: new Date(),
             });
-            toast.success('Subscribed successfully!');
+            toast.success(t('subscribed'));
         } catch (error) {
-            toast.error('Failed to subscribe');
+            toast.error(t('subscribeError'));
             console.error(error);
         } finally {
             setIsSubscribing(false);
@@ -66,9 +69,9 @@ export default function TeacherProfilePage({ params }: { params: Promise<{ id: s
                 .where('[studentId+teacherId]')
                 .equals([currentUser.id, teacherId])
                 .delete();
-            toast.success('Unsubscribed successfully');
+            toast.success(t('unsubscribed'));
         } catch (error) {
-            toast.error('Failed to unsubscribe');
+            toast.error(t('unsubscribeError'));
             console.error(error);
         } finally {
             setIsSubscribing(false);
@@ -83,23 +86,17 @@ export default function TeacherProfilePage({ params }: { params: Promise<{ id: s
         );
     }
 
-    if (!isAuthorized) {
-        return null;
-    }
+    if (!isAuthorized) return null;
 
-    // Check if teacher exists and is approved
     if (!teacher || teacher.role !== 'teacher' || teacher.teacherStatus !== 'approved') {
         return (
             <div className="space-y-6">
                 <Button variant="ghost" onClick={() => router.back()}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back
+                    {tc('back')}
                 </Button>
                 <div className="text-center py-12">
-                    <h2 className="text-xl font-semibold">Teacher not found</h2>
-                    <p className="text-muted-foreground mt-2">
-                        This teacher profile is not available.
-                    </p>
+                    <h2 className="text-xl font-semibold">{t('teacherNotFound')}</h2>
                 </div>
             </div>
         );
@@ -116,7 +113,7 @@ export default function TeacherProfilePage({ params }: { params: Promise<{ id: s
         <div className="space-y-6">
             <Button variant="ghost" onClick={() => router.back()}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
+                {tc('back')}
             </Button>
 
             {/* Teacher Header */}
@@ -132,13 +129,13 @@ export default function TeacherProfilePage({ params }: { params: Promise<{ id: s
                         {profile && (
                             <Badge variant="secondary" className="text-sm">
                                 <DollarSign className="h-3 w-3 mr-1" />
-                                ${profile.hourlyRate}/hr
+                                ${profile.hourlyRate}{tc('per_hour')}
                             </Badge>
                         )}
                         {profile?.lessonDurations?.map(duration => (
                             <Badge key={duration} variant="outline">
                                 <Clock className="h-3 w-3 mr-1" />
-                                {duration} min
+                                {tc('min', { count: duration })}
                             </Badge>
                         ))}
                     </div>
@@ -156,20 +153,20 @@ export default function TeacherProfilePage({ params }: { params: Promise<{ id: s
                     ) : (
                         <UserPlus className="h-4 w-4 mr-2" />
                     )}
-                    {isSubscribed ? 'Unsubscribe' : 'Subscribe'}
+                    {isSubscribed ? t('unsubscribe') : t('subscribe')}
                 </Button>
             </div>
 
             {/* Bio */}
             <Card>
                 <CardHeader>
-                    <CardTitle>About</CardTitle>
+                    <CardTitle>{t('about')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {profile?.bio ? (
                         <p className="whitespace-pre-wrap">{profile.bio}</p>
                     ) : (
-                        <p className="text-muted-foreground italic">No bio available</p>
+                        <p className="text-muted-foreground italic">{t('noBio')}</p>
                     )}
                 </CardContent>
             </Card>
@@ -179,19 +176,19 @@ export default function TeacherProfilePage({ params }: { params: Promise<{ id: s
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Calendar className="h-5 w-5" />
-                        Weekly Availability
+                        {t('weeklyAvailability')}
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
                     {availability.length === 0 ? (
-                        <p className="text-muted-foreground italic">No availability set</p>
+                        <p className="text-muted-foreground italic">{t('noAvailability')}</p>
                     ) : (
                         <div className="grid gap-2">
-                            {DAYS_OF_WEEK.map((day, index) => {
+                            {DAY_KEYS.map((dayKey, index) => {
                                 const slots = availabilityByDay.get(index);
                                 return (
-                                    <div key={day} className="flex items-center gap-4 py-2 border-b last:border-0">
-                                        <span className="font-medium w-24">{day}</span>
+                                    <div key={dayKey} className="flex items-center gap-4 py-2 border-b last:border-0">
+                                        <span className="font-medium w-24">{td(dayKey)}</span>
                                         {slots && slots.length > 0 ? (
                                             <div className="flex flex-wrap gap-2">
                                                 {slots.map((slot, i) => (
@@ -201,7 +198,7 @@ export default function TeacherProfilePage({ params }: { params: Promise<{ id: s
                                                 ))}
                                             </div>
                                         ) : (
-                                            <span className="text-muted-foreground text-sm">Unavailable</span>
+                                            <span className="text-muted-foreground text-sm">—</span>
                                         )}
                                     </div>
                                 );
